@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#0b57d0" />
+  <link rel="manifest" href="./manifest.json" />
   <title>농지 주소·면적 측정기</title>
   <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=25bd6279b09da3619d1cfc1619d628f2&libraries=services"></script>
   <style>
@@ -18,6 +19,31 @@
       background: #111;
     }
     #map { width: 100%; height: 100%; height: 100dvh; }
+
+    /* 화면 중앙 고정 십자선 */
+    .center-crosshair {
+      position: fixed;
+      top: 50%; left: 50%;
+      width: 28px; height: 28px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 9;
+    }
+    .center-crosshair::before,
+    .center-crosshair::after {
+      content: "";
+      position: absolute;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+    }
+    .center-crosshair::before {
+      top: 50%; left: 0; right: 0; height: 2px;
+      transform: translateY(-50%);
+    }
+    .center-crosshair::after {
+      left: 50%; top: 0; bottom: 0; width: 2px;
+      transform: translateX(-50%);
+    }
 
     /* 상단 창: 주소 + 면적(㎡, 평)만 깔끔하게 표시 */
     .top-panel {
@@ -94,8 +120,23 @@
       padding: 2px 6px; text-align: center;
     }
 
-    .bottom-bar {
+    /* 하단 영역: 중앙 점 찍기 버튼 + 4개 기능 버튼 */
+    .bottom-wrap {
       position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 10;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .center-shot-row {
+      display: flex; justify-content: center;
+    }
+    .btn-center-add {
+      padding: 9px 18px; border: 2px solid #ffffff; border-radius: 20px;
+      background: rgba(17, 24, 39, 0.92); color: #ffffff;
+      font-size: 12px; font-weight: 900;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    }
+    .btn-center-add:active { background: #0b57d0; }
+
+    .bottom-bar {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
     }
     .action-btn {
@@ -108,11 +149,12 @@
     .btn-clear { background: #c62828; }
     .btn-capture { background: #0b57d0; }
 
-    /* 캡처모드: 모든 편집/제어 메뉴 숨김 */
+    /* 캡처모드: 모든 편집/제어 메뉴 및 중앙 십자선 숨김 */
     body.capture-mode .addr-actions,
     body.capture-mode .search-bar,
     body.capture-mode .right-panel,
-    body.capture-mode .bottom-bar {
+    body.capture-mode .bottom-wrap,
+    body.capture-mode .center-crosshair {
       display: none !important;
     }
     body.capture-mode .addr-row {
@@ -131,10 +173,18 @@
       display: block;
     }
 
+    /* 포인트 점: 시각 크기는 7px 유지하되 손가락 드래그가 쉽도록 터치 영역 확보 */
+    .pt-dot-hit {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: grab; touch-action: none;
+    }
+    .pt-dot-hit:active { cursor: grabbing; }
     .pt-dot-total {
       width: 7px; height: 7px; border-radius: 50%;
       background: #ff1744; border: 1.5px solid #ffffff;
       box-shadow: 0 0 3px rgba(0,0,0,0.85);
+      pointer-events: none;
     }
 
     .yellow-dot-wrap {
@@ -155,6 +205,7 @@
 <body>
 
 <div id="map"></div>
+<div class="center-crosshair" aria-hidden="true"></div>
 
 <div class="top-panel">
   <div class="addr-row">
@@ -192,11 +243,16 @@
   </div>
 </div>
 
-<div class="bottom-bar">
-  <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
-  <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
-  <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
-  <button class="action-btn btn-capture" onclick="toggleCaptureMode()">캡처모드</button>
+<div class="bottom-wrap">
+  <div class="center-shot-row">
+    <button class="btn-center-add" onclick="addPointAtCenter()">+ 중앙에 점 찍기</button>
+  </div>
+  <div class="bottom-bar">
+    <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
+    <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
+    <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
+    <button class="action-btn btn-capture" onclick="toggleCaptureMode()">캡처모드</button>
+  </div>
 </div>
 
 <button class="exit-capture-btn" onclick="toggleCaptureMode()">편집 복귀</button>
@@ -207,6 +263,7 @@
   let isCadastral = false;
   let isCaptureMode = false;
   let currentJibun = '';
+  let draggingIndex = null;
 
   const state = {
     points: [],
@@ -219,7 +276,8 @@
     map = new kakao.maps.Map(container, {
       center: new kakao.maps.LatLng(33.3617, 126.5292),
       level: 1,
-      mapTypeId: kakao.maps.MapTypeId.HYBRID
+      mapTypeId: kakao.maps.MapTypeId.HYBRID,
+      draggable: true
     });
     geocoder = new kakao.maps.services.Geocoder();
 
@@ -229,14 +287,52 @@
     });
 
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      if (isCaptureMode) return;
+      if (isCaptureMode || draggingIndex !== null) return;
       addPoint(mouseEvent.latLng);
     });
 
     kakao.maps.event.addListener(map, 'zoom_changed', updateZoomBadge);
     updateZoomBadge();
     moveToMyLocation(true);
+
+    // 점 드래그 이동용 전역 포인터 이벤트
+    window.addEventListener('pointermove', handlePointDragMove, { passive: false });
+    window.addEventListener('pointerup', handlePointDragEnd);
+    window.addEventListener('pointercancel', handlePointDragEnd);
   };
+
+  function screenClientToLatLng(clientX, clientY) {
+    const rect = document.getElementById('map').getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const proj = map.getProjection();
+    return proj.coordsFromContainerPoint(new kakao.maps.Point(x, y));
+  }
+
+  function handlePointDragMove(e) {
+    if (draggingIndex === null || !map) return;
+    e.preventDefault();
+    const nextLatLng = screenClientToLatLng(e.clientX, e.clientY);
+    state.points[draggingIndex] = nextLatLng;
+    const ov = state.overlays[draggingIndex];
+    if (ov) ov.setPosition(nextLatLng);
+    updateCalculations();
+  }
+
+  function handlePointDragEnd() {
+    if (draggingIndex === null) return;
+    const movedIdx = draggingIndex;
+    draggingIndex = null;
+    if (map) map.setDraggable(true);
+    if (movedIdx === 0 && state.points[0]) {
+      updateAddressFromCoord(state.points[0]);
+    }
+  }
+
+  function addPointAtCenter() {
+    if (isCaptureMode || !map) return;
+    addPoint(map.getCenter());
+  }
 
   function toggleCaptureMode() {
     isCaptureMode = !isCaptureMode;
@@ -275,14 +371,27 @@
   }
 
   function addPoint(latLng) {
+    const pointIndex = state.points.length;
     state.points.push(latLng);
 
-    const dot = document.createElement('div');
-    dot.className = 'pt-dot-total';
+    const hitEl = document.createElement('div');
+    hitEl.className = 'pt-dot-hit';
+    hitEl.innerHTML = '<div class="pt-dot-total"></div>';
+
+    hitEl.addEventListener('pointerdown', function (e) {
+      if (isCaptureMode) return;
+      e.stopPropagation();
+      e.preventDefault();
+      // 현재 배열에서 이 오버레이의 실시간 인덱스 찾기
+      const currentIdx = state.overlays.indexOf(overlay);
+      if (currentIdx === -1) return;
+      draggingIndex = currentIdx;
+      map.setDraggable(false);
+    });
 
     const overlay = new kakao.maps.CustomOverlay({
       position: latLng,
-      content: dot,
+      content: hitEl,
       xAnchor: 0.5,
       yAnchor: 0.5,
       zIndex: 4
@@ -290,7 +399,7 @@
     overlay.setMap(map);
     state.overlays.push(overlay);
 
-    if (state.points.length === 1) {
+    if (pointIndex === 0) {
       updateAddressFromCoord(latLng);
     }
 
