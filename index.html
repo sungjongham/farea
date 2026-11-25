@@ -2,16 +2,20 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0b57d0" />
   <title>농지 주소·면적 측정기</title>
   <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=25bd6279b09da3619d1cfc1619d628f2&libraries=services"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body, html { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; overflow: hidden; }
-    #map { width: 100%; height: 100%; }
+    body, html { width: 100%; height: 100%; height: 100dvh; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; overflow: hidden; }
+    #map { width: 100%; height: 100%; height: 100dvh; }
 
     .top-panel {
-      position: absolute; top: 8px; left: 8px; right: 8px; z-index: 10;
+      position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
       background: rgba(255, 255, 255, 0.95); border-radius: 10px;
       padding: 7px 9px; box-shadow: 0 3px 10px rgba(0,0,0,0.18);
     }
@@ -56,7 +60,7 @@
     .ratio-rem { font-size: 10px; color: #555; }
 
     .layer-controls {
-      position: absolute; top: 126px; right: 8px; z-index: 10;
+      position: absolute; top: calc(138px + env(safe-area-inset-top)); right: 8px; z-index: 10;
       display: flex; flex-direction: column; gap: 5px;
     }
     .layer-btn {
@@ -66,8 +70,26 @@
     }
     .layer-btn.active { background: #0b57d0; color: #fff; }
 
+    .zoom-controls {
+      position: absolute; bottom: calc(64px + env(safe-area-inset-bottom)); right: 8px; z-index: 12;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .zoom-btn {
+      width: 38px; height: 38px; border: 1px solid #cbd5e1; border-radius: 9px;
+      background: rgba(255,255,255,0.98); color: #111;
+      font-size: 20px; font-weight: 800; line-height: 1;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.25);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .zoom-btn:active { background: #e2e8f0; }
+    .zoom-badge {
+      font-size: 10px; font-weight: 700; color: #fff;
+      background: rgba(0,0,0,0.68); border-radius: 5px;
+      padding: 2px 6px; text-align: center;
+    }
+
     .bottom-bar {
-      position: absolute; bottom: 10px; left: 8px; right: 8px; z-index: 10;
+      position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 10;
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
     }
     .action-btn {
@@ -81,7 +103,7 @@
     .btn-save { background: #0b57d0; }
 
     .saved-drawer {
-      position: absolute; bottom: 58px; left: 8px; right: 8px; z-index: 15;
+      position: absolute; bottom: calc(58px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 15;
       max-height: 170px; overflow-y: auto;
       background: rgba(255,255,255,0.98); border-radius: 9px;
       padding: 9px; box-shadow: 0 4px 14px rgba(0,0,0,0.22);
@@ -158,9 +180,15 @@
 </div>
 
 <div class="layer-controls">
-  <button class="layer-btn" id="btnSky" onclick="toggleSkyview()">위성지도</button>
+  <button class="layer-btn active" id="btnSky" onclick="toggleSkyview()">위성지도</button>
   <button class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
   <button class="layer-btn" id="btnList" onclick="toggleSavedList()">저장목록</button>
+</div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoomIn()" title="확대">+</button>
+  <div class="zoom-badge" id="zoomBadge">L1</div>
+  <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
 </div>
 
 <div class="saved-drawer" id="savedDrawer">
@@ -185,7 +213,7 @@
   const STORAGE_KEY = 'farmland_measure_records_v1';
   let map, geocoder, myLocationOverlay = null;
   let currentMode = 'total';
-  let isSkyview = false;
+  let isSkyview = true;
   let isCadastral = false;
   let currentJibun = '';
 
@@ -198,7 +226,8 @@
     const container = document.getElementById('map');
     map = new kakao.maps.Map(container, {
       center: new kakao.maps.LatLng(33.3617, 126.5292),
-      level: 1
+      level: 1,
+      mapTypeId: kakao.maps.MapTypeId.HYBRID
     });
     geocoder = new kakao.maps.services.Geocoder();
 
@@ -216,8 +245,28 @@
       addPoint(mouseEvent.latLng);
     });
 
+    kakao.maps.event.addListener(map, 'zoom_changed', updateZoomBadge);
+    updateZoomBadge();
     renderSavedList();
+    moveToMyLocation(true);
   };
+
+  function updateZoomBadge() {
+    if (!map) return;
+    document.getElementById('zoomBadge').innerText = 'L' + map.getLevel();
+  }
+
+  function zoomIn() {
+    if (!map) return;
+    const lv = map.getLevel();
+    if (lv > 1) map.setLevel(lv - 1);
+  }
+
+  function zoomOut() {
+    if (!map) return;
+    const lv = map.getLevel();
+    if (lv < 14) map.setLevel(lv + 1);
+  }
 
   function toggleSearch() {
     const bar = document.getElementById('searchBar');
@@ -320,154 +369,4 @@
 
   function toggleSkyview() {
     isSkyview = !isSkyview;
-    map.setMapTypeId(isSkyview ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP);
-    document.getElementById('btnSky').classList.toggle('active', isSkyview);
-  }
-
-  function toggleCadastral() {
-    isCadastral = !isCadastral;
-    if (isCadastral) {
-      map.addOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
-    } else {
-      map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
-    }
-    document.getElementById('btnCadastral').classList.toggle('active', isCadastral);
-  }
-
-  function showYellowDot(latLng) {
-    if (myLocationOverlay) {
-      myLocationOverlay.setPosition(latLng);
-      myLocationOverlay.setMap(map);
-      return;
-    }
-    const content = document.createElement('div');
-    content.className = 'yellow-dot-wrap';
-    content.innerHTML = '<div class="yellow-dot-pulse"></div><div class="yellow-dot-core"></div>';
-    myLocationOverlay = new kakao.maps.CustomOverlay({
-      position: latLng,
-      content: content,
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 5
-    });
-    myLocationOverlay.setMap(map);
-  }
-
-  function moveToMyLocation() {
-    if (!navigator.geolocation) {
-      alert('이 기기에서 위치 정보를 지원하지 않습니다.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        showYellowDot(loc);
-        map.setCenter(loc);
-        map.setLevel(1);
-      },
-      () => {
-        alert('위치 권한을 허용해 주세요.');
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  }
-
-  function searchAddress() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) return;
-    geocoder.addressSearch(query, function (result, status) {
-      if (status === kakao.maps.services.Status.OK) {
-        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
-        map.setCenter(coords);
-        map.setLevel(1);
-        document.getElementById('searchBar').classList.remove('open');
-      } else {
-        alert('주소를 찾을 수 없습니다. 지번이나 도로명을 정확히 입력해 주세요.');
-      }
-    });
-  }
-
-  function copyAddress() {
-    if (!currentJibun) return;
-    navigator.clipboard.writeText(currentJibun).then(() => {
-      alert('지번 복사됨: ' + currentJibun);
-    });
-  }
-
-  function saveRecord() {
-    const tM2 = state.total.points.length >= 3 ? state.total.polygon.getArea() : 0;
-    const sM2 = state.sub.points.length >= 3 ? state.sub.polygon.getArea() : 0;
-    if (tM2 === 0 && sM2 === 0) {
-      alert('최소 3개 이상의 지점을 찍어 면적을 계산한 후 저장하세요.');
-      return;
-    }
-    const tPyeong = tM2 / 3.305785;
-    const sPyeong = sM2 / 3.305785;
-    const ratio = (tM2 > 0 && sM2 > 0) ? ((sM2 / tM2) * 100).toFixed(1) : '0.0';
-
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    records.unshift({
-      id: Date.now(),
-      address: currentJibun || '주소 미확인',
-      totalM2: tM2.toFixed(1),
-      totalPyeong: tPyeong.toFixed(1),
-      subM2: sM2.toFixed(1),
-      subPyeong: sPyeong.toFixed(1),
-      ratio: ratio,
-      date: new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    renderSavedList();
-    document.getElementById('savedDrawer').style.display = 'block';
-    document.getElementById('btnList').classList.add('active');
-  }
-
-  function renderSavedList() {
-    const body = document.getElementById('savedListBody');
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (records.length === 0) {
-      body.innerHTML = '<div style="color:#777; text-align:center; padding:10px 0;">저장된 기록이 없습니다.</div>';
-      return;
-    }
-    body.innerHTML = records.map(r => `
-      <div class="saved-item">
-        <div style="line-height:1.4;">
-          <strong>${r.address}</strong> <span style="color:#888;">(${r.date})</span><br/>
-          전체: ${r.totalM2}㎡(${r.totalPyeong}평) | 부분: ${r.subM2}㎡ (${r.ratio}%)
-        </div>
-        <button class="mini-btn" onclick="copyOneRecord(${r.id})">복사</button>
-      </div>
-    `).join('');
-  }
-
-  function copyOneRecord(id) {
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const r = records.find(item => item.id === id);
-    if (!r) return;
-    const line = `${r.address}\t${r.totalM2}\t${r.totalPyeong}\t${r.subM2}\t${r.subPyeong}\t${r.ratio}%`;
-    navigator.clipboard.writeText(line).then(() => alert('엑셀 한 줄 형식으로 복사되었습니다.'));
-  }
-
-  function copyAllRecords() {
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (records.length === 0) return;
-    const header = '지번주소\t전체면적(㎡)\t전체평수\t부분면적(㎡)\t부분평수\t비율(%)';
-    const lines = records.map(r => `${r.address}\t${r.totalM2}\t${r.totalPyeong}\t${r.subM2}\t${r.subPyeong}\t${r.ratio}%`);
-    navigator.clipboard.writeText([header, ...lines].join('\n')).then(() => alert('전체 목록이 엑셀 붙여넣기 형식으로 복사되었습니다.'));
-  }
-
-  function clearAllRecords() {
-    if (!confirm('저장된 측정 기록을 모두 삭제할까요?')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    renderSavedList();
-  }
-
-  function toggleSavedList() {
-    const drawer = document.getElementById('savedDrawer');
-    const isOpen = drawer.style.display === 'block';
-    drawer.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('btnList').classList.toggle('active', !isOpen);
-  }
-</script>
-</body>
-</html>
+    map.setMapTypeId(is
