@@ -19,6 +19,7 @@
     }
     #map { width: 100%; height: 100%; height: 100dvh; }
 
+    /* 상단 창: 주소 + 면적(㎡, 평)만 깔끔하게 표시 */
     .top-panel {
       position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
       background: #ffffff; border: 2px solid #111111; border-radius: 10px;
@@ -61,8 +62,9 @@
       color: #0f172a; font-size: 17px; font-weight: 900;
     }
 
+    /* 우측 패널: 상단 면적 숫자를 가리지 않도록 아래로 띄움 */
     .right-panel {
-      position: absolute; top: calc(114px + env(safe-area-inset-top)); right: 8px; z-index: 12;
+      position: absolute; top: calc(152px + env(safe-area-inset-top)); right: 8px; z-index: 12;
       display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
     }
     .layer-controls {
@@ -104,21 +106,30 @@
     .btn-gps { background: #2e7d32; }
     .btn-undo { background: #475569; }
     .btn-clear { background: #c62828; }
-    .btn-save { background: #0b57d0; }
+    .btn-capture { background: #0b57d0; }
 
-    .saved-drawer {
-      position: absolute; bottom: calc(58px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 15;
-      max-height: 170px; overflow-y: auto;
-      background: #ffffff; border: 1.5px solid #111111; border-radius: 9px;
-      padding: 9px; box-shadow: 0 4px 14px rgba(0,0,0,0.28);
-      font-size: 12px; display: none;
+    /* 캡처화면 모드: 모든 편집/제어 메뉴 숨김 */
+    body.capture-mode .addr-actions,
+    body.capture-mode .search-bar,
+    body.capture-mode .right-panel,
+    body.capture-mode .bottom-bar {
+      display: none !important;
     }
-    .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #ddd; }
-    .saved-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 6px 0; border-bottom: 1px solid #eee;
+    body.capture-mode .addr-row {
+      margin-bottom: 4px;
     }
-    .saved-item:last-child { border-bottom: none; }
+
+    /* 캡처 모드에서 편집 메뉴로 돌아오는 버튼 */
+    .exit-capture-btn {
+      display: none;
+      position: fixed; bottom: calc(14px + env(safe-area-inset-bottom)); right: 12px; z-index: 25;
+      padding: 9px 14px; border: 1.5px solid #111111; border-radius: 20px;
+      background: rgba(255, 255, 255, 0.95); color: #111111;
+      font-size: 12px; font-weight: 900; box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+    body.capture-mode .exit-capture-btn {
+      display: block;
+    }
 
     .pt-dot-total {
       width: 11px; height: 11px; border-radius: 50%;
@@ -172,7 +183,6 @@
   <div class="layer-controls">
     <button class="layer-btn active" id="btnSky" onclick="toggleSkyview()">위성지도</button>
     <button class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
-    <button class="layer-btn" id="btnList" onclick="toggleSavedList()">저장목록</button>
   </div>
 
   <div class="zoom-controls">
@@ -182,29 +192,20 @@
   </div>
 </div>
 
-<div class="saved-drawer" id="savedDrawer">
-  <div class="drawer-header">
-    <strong>저장된 농지 측정 기록</strong>
-    <div>
-      <button class="mini-btn" onclick="copyAllRecords()">전체 엑셀복사</button>
-      <button class="mini-btn" style="color:#c62828;" onclick="clearAllRecords()">전체삭제</button>
-    </div>
-  </div>
-  <div id="savedListBody"></div>
-</div>
-
 <div class="bottom-bar">
   <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
   <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
   <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
-  <button class="action-btn btn-save" onclick="saveRecord()">기록 저장</button>
+  <button class="action-btn btn-capture" onclick="toggleCaptureMode()">캡처화면</button>
 </div>
 
+<button class="exit-capture-btn" onclick="toggleCaptureMode()">편집 복귀</button>
+
 <script>
-  const STORAGE_KEY = 'farmland_measure_records_v1';
   let map, geocoder, myLocationOverlay = null;
   let isSkyview = true;
   let isCadastral = false;
+  let isCaptureMode = false;
   let currentJibun = '';
 
   const state = {
@@ -228,14 +229,25 @@
     });
 
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
+      if (isCaptureMode) return;
       addPoint(mouseEvent.latLng);
     });
 
     kakao.maps.event.addListener(map, 'zoom_changed', updateZoomBadge);
     updateZoomBadge();
-    renderSavedList();
     moveToMyLocation(true);
   };
+
+  function toggleCaptureMode() {
+    isCaptureMode = !isCaptureMode;
+    document.body.classList.toggle('capture-mode', isCaptureMode);
+    if (isCaptureMode) {
+      document.getElementById('searchBar').classList.remove('open');
+    }
+    if (map) {
+      setTimeout(() => map.relayout(), 50);
+    }
+  }
 
   function updateZoomBadge() {
     if (!map) return;
@@ -402,75 +414,6 @@
     navigator.clipboard.writeText(currentJibun).then(() => {
       alert('지번 복사됨: ' + currentJibun);
     });
-  }
-
-  function saveRecord() {
-    if (state.points.length < 3) {
-      alert('최소 3개 이상의 지점을 찍어 면적을 계산한 후 저장하세요.');
-      return;
-    }
-    const tM2 = state.polygon.getArea();
-    const tPyeong = tM2 / 3.305785;
-
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    records.unshift({
-      id: Date.now(),
-      address: currentJibun || '주소 미확인',
-      totalM2: tM2.toFixed(1),
-      totalPyeong: tPyeong.toFixed(1),
-      date: new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    renderSavedList();
-    document.getElementById('savedDrawer').style.display = 'block';
-    document.getElementById('btnList').classList.add('active');
-  }
-
-  function renderSavedList() {
-    const body = document.getElementById('savedListBody');
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (records.length === 0) {
-      body.innerHTML = '<div style="color:#777; text-align:center; padding:10px 0;">저장된 기록이 없습니다.</div>';
-      return;
-    }
-    body.innerHTML = records.map(r => `
-      <div class="saved-item">
-        <div style="line-height:1.4;">
-          <strong>${r.address}</strong> <span style="color:#888;">(${r.date})</span><br/>
-          면적: ${r.totalM2} ㎡ (${r.totalPyeong} 평)
-        </div>
-        <button class="mini-btn" onclick="copyOneRecord(${r.id})">복사</button>
-      </div>
-    `).join('');
-  }
-
-  function copyOneRecord(id) {
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const r = records.find(item => item.id === id);
-    if (!r) return;
-    const line = `${r.address}\t${r.totalM2}\t${r.totalPyeong}`;
-    navigator.clipboard.writeText(line).then(() => alert('엑셀 한 줄 형식으로 복사되었습니다.'));
-  }
-
-  function copyAllRecords() {
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (records.length === 0) return;
-    const header = '지번주소\t면적(㎡)\t평수(평)';
-    const lines = records.map(r => `${r.address}\t${r.totalM2}\t${r.totalPyeong}`);
-    navigator.clipboard.writeText([header, ...lines].join('\n')).then(() => alert('전체 목록이 엑셀 붙여넣기 형식으로 복사되었습니다.'));
-  }
-
-  function clearAllRecords() {
-    if (!confirm('저장된 측정 기록을 모두 삭제할까요?')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    renderSavedList();
-  }
-
-  function toggleSavedList() {
-    const drawer = document.getElementById('savedDrawer');
-    const isOpen = drawer.style.display === 'block';
-    drawer.style.display = isOpen ? 'none' : 'block';
-    document.getElementById('btnList').classList.toggle('active', !isOpen);
   }
 </script>
 </body>
