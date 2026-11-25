@@ -11,8 +11,22 @@
   <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=25bd6279b09da3619d1cfc1619d628f2&libraries=services"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body, html { width: 100%; height: 100%; height: 100dvh; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; overflow: hidden; }
-    #map { width: 100%; height: 100%; height: 100dvh; }
+    body, html {
+      width: 100%; height: 100%; height: 100dvh;
+      font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+      overflow: hidden; overscroll-behavior: none; touch-action: none;
+      background: #111;
+    }
+
+    #mapViewport {
+      position: relative; width: 100%; height: 100%; height: 100dvh; overflow: hidden;
+    }
+    #mapStage {
+      position: relative; width: 100%; height: 100%;
+      transform-origin: center center;
+      transition: transform 0.14s ease-out;
+    }
+    #map { width: 100%; height: 100%; }
 
     .top-panel {
       position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
@@ -90,6 +104,15 @@
       background: rgba(0,0,0,0.72); border-radius: 5px;
       padding: 2px 6px; text-align: center;
     }
+    .mag-btn {
+      width: 40px; padding: 5px 0; border: 1.5px solid #334155; border-radius: 8px;
+      background: rgba(255,255,255,0.96); color: #111;
+      font-size: 11px; font-weight: 800; text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+    }
+    .mag-btn.active {
+      background: #d50000; color: #fff; border-color: #d50000;
+    }
 
     .bottom-bar {
       position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 10;
@@ -147,7 +170,11 @@
 </head>
 <body>
 
-<div id="map"></div>
+<div id="mapViewport">
+  <div id="mapStage">
+    <div id="map"></div>
+  </div>
+</div>
 
 <div class="top-panel">
   <div class="addr-row">
@@ -193,6 +220,9 @@
     <button class="zoom-btn" onclick="zoomIn()" title="확대">+</button>
     <div class="zoom-badge" id="zoomBadge">L1</div>
     <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
+    <button class="mag-btn active" id="mag10" onclick="setMagnification(1)">×1.0</button>
+    <button class="mag-btn" id="mag15" onclick="setMagnification(1.5)">×1.5</button>
+    <button class="mag-btn" id="mag20" onclick="setMagnification(2)">×2.0</button>
   </div>
 </div>
 
@@ -221,6 +251,7 @@
   let isSkyview = true;
   let isCadastral = false;
   let currentJibun = '';
+  let magScale = 1;
 
   const state = {
     total: { points: [], overlays: [], polygon: null },
@@ -246,7 +277,28 @@
       strokeOpacity: 0.98, fillColor: '#f59e0b', fillOpacity: 0.25
     });
 
+    const viewport = document.getElementById('mapViewport');
+    viewport.addEventListener('click', function (e) {
+      if (e.target.closest('.top-panel, .right-panel, .bottom-bar, .saved-drawer')) return;
+      if (magScale <= 1) return;
+
+      const rect = viewport.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const stageX = cx + (clickX - cx) / magScale;
+      const stageY = cy + (clickY - cy) / magScale;
+
+      const proj = map.getProjection();
+      if (!proj) return;
+      const latLng = proj.coordsFromPoint(new kakao.maps.Point(stageX, stageY));
+      addPoint(latLng);
+    }, true);
+
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
+      if (magScale > 1) return;
       addPoint(mouseEvent.latLng);
     });
 
@@ -255,6 +307,20 @@
     renderSavedList();
     moveToMyLocation(true);
   };
+
+  function setMagnification(scale) {
+    magScale = scale;
+    const stage = document.getElementById('mapStage');
+    stage.style.transform = `scale(${scale})`;
+
+    document.getElementById('mag10').classList.toggle('active', scale === 1);
+    document.getElementById('mag15').classList.toggle('active', scale === 1.5);
+    document.getElementById('mag20').classList.toggle('active', scale === 2);
+
+    setTimeout(() => {
+      if (map) map.relayout();
+    }, 160);
+  }
 
   function updateZoomBadge() {
     if (!map) return;
