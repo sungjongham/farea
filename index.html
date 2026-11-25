@@ -24,12 +24,11 @@
     #mapStage {
       position: relative; width: 100%; height: 100%;
       transform-origin: 50% 50%;
-      transition: transform 0.12s ease-out;
       will-change: transform;
     }
     #map { width: 100%; height: 100%; }
 
-    /* 상단 창: 주소 + 면적(제곱미터, 평)만 뚜렷하게 */
+    /* 상단 창: 주소 + 면적(㎡, 평)만 간결하게 표시 */
     .top-panel {
       position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
       background: #ffffff; border: 2px solid #111111; border-radius: 10px;
@@ -60,16 +59,16 @@
 
     .area-display {
       display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-      padding: 4px 2px 1px;
+      padding: 3px 2px 1px;
     }
     .area-title {
-      font-size: 15px; font-weight: 900; color: #111111; flex-shrink: 0;
+      font-size: 16px; font-weight: 900; color: #111111; flex-shrink: 0;
     }
     .area-values {
-      font-size: 17px; font-weight: 900; color: #d50000; text-align: right; letter-spacing: -0.3px;
+      font-size: 18px; font-weight: 900; color: #d50000; text-align: right; letter-spacing: -0.3px;
     }
     .area-pyeong {
-      color: #0f172a; font-size: 16px; font-weight: 900;
+      color: #0f172a; font-size: 17px; font-weight: 900;
     }
 
     .right-panel {
@@ -185,7 +184,7 @@
   </div>
 
   <div class="area-display">
-    <span class="area-title">면적 (<span id="cntTotal">0</span>점):</span>
+    <span class="area-title">면적:</span>
     <span class="area-values">
       <span id="totalM2">0.0 ㎡</span>
       <span class="area-pyeong">(<span id="totalPyeong">0.0</span> 평)</span>
@@ -257,29 +256,31 @@
     });
 
     const viewport = document.getElementById('mapViewport');
+    const mapEl = document.getElementById('map');
+
     viewport.addEventListener('click', function (e) {
       if (e.target.closest('.top-panel, .right-panel, .bottom-bar, .saved-drawer')) return;
-      if (magScale <= 1) return;
 
-      const rect = viewport.getBoundingClientRect();
-      const cx = rect.width / 2;
-      const cy = rect.height / 2;
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-
-      const stageX = cx + (clickX - cx) / magScale;
-      const stageY = cy + (clickY - cy) / magScale;
-
+      const vpRect = viewport.getBoundingClientRect();
+      const mapRect = mapEl.getBoundingClientRect();
       const proj = map.getProjection();
       if (!proj) return;
-      const latLng = proj.coordsFromPoint(new kakao.maps.Point(stageX, stageY));
+
+      const screenX = e.clientX - vpRect.left;
+      const screenY = e.clientY - vpRect.top;
+      const vpCenterX = vpRect.width / 2;
+      const vpCenterY = vpRect.height / 2;
+
+      const stageX = vpCenterX + (screenX - vpCenterX) / magScale;
+      const stageY = vpCenterY + (screenY - vpCenterY) / magScale;
+
+      const mapOffsetX = (mapRect.left - vpRect.left) / magScale;
+      const mapOffsetY = (mapRect.top - vpRect.top) / magScale;
+
+      const pt = new kakao.maps.Point(stageX - mapOffsetX, stageY - mapOffsetY);
+      const latLng = proj.coordsFromPoint(pt);
       addPoint(latLng);
     }, true);
-
-    kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      if (magScale > 1) return;
-      addPoint(mouseEvent.latLng);
-    });
 
     kakao.maps.event.addListener(map, 'zoom_changed', updateZoomBadge);
     updateZoomBadge();
@@ -296,9 +297,7 @@
     document.getElementById('mag15').classList.toggle('active', scale === 1.5);
     document.getElementById('mag20').classList.toggle('active', scale === 2);
 
-    setTimeout(() => {
-      if (map) map.relayout();
-    }, 140);
+    if (map) map.relayout();
   }
 
   function updateZoomBadge() {
@@ -366,7 +365,6 @@
     const tM2 = state.points.length >= 3 ? state.polygon.getArea() : 0;
     const tPyeong = tM2 / 3.305785;
 
-    document.getElementById('cntTotal').innerText = state.points.length;
     document.getElementById('totalM2').innerText = `${tM2.toFixed(1)} ㎡`;
     document.getElementById('totalPyeong').innerText = tPyeong.toFixed(1);
   }
