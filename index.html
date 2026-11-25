@@ -23,95 +23,94 @@
     }
     #mapStage {
       position: relative; width: 100%; height: 100%;
-      transform-origin: center center;
-      transition: transform 0.14s ease-out;
+      transform-origin: 50% 50%;
+      transition: transform 0.12s ease-out;
+      will-change: transform;
     }
     #map { width: 100%; height: 100%; }
 
+    /* 상단 창: 주소 + 면적(제곱미터, 평)만 뚜렷하게 */
     .top-panel {
       position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
-      background: rgba(255, 255, 255, 0.95); border-radius: 10px;
-      padding: 7px 9px; box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+      background: #ffffff; border: 2px solid #111111; border-radius: 10px;
+      padding: 8px 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.28);
     }
     .addr-row {
       display: flex; justify-content: space-between; align-items: center; gap: 6px;
-      background: #f3f5f8; padding: 5px 8px; border-radius: 7px; margin-bottom: 6px;
+      background: #f1f5f9; padding: 5px 8px; border-radius: 6px; margin-bottom: 6px;
     }
     .addr-text {
-      font-size: 12px; font-weight: 700; color: #111;
+      font-size: 13px; font-weight: 800; color: #0f172a;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
     }
     .addr-actions { display: flex; gap: 4px; flex-shrink: 0; }
     .mini-btn {
-      padding: 4px 7px; font-size: 11px; font-weight: 700; border: 1px solid #bbb;
-      background: #fff; border-radius: 5px; color: #222;
+      padding: 4px 8px; font-size: 11px; font-weight: 800; border: 1px solid #334155;
+      background: #ffffff; border-radius: 5px; color: #0f172a;
     }
 
     .search-bar { display: none; gap: 5px; margin-bottom: 6px; }
     .search-bar.open { display: flex; }
     .search-bar input {
-      flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px;
+      flex: 1; padding: 6px 8px; border: 1.5px solid #334155; border-radius: 6px; font-size: 13px; color: #111;
     }
     .search-bar button {
-      padding: 6px 10px; border: none; border-radius: 6px; background: #222; color: #fff; font-weight: 700; font-size: 12px;
+      padding: 6px 12px; border: none; border-radius: 6px; background: #111111; color: #ffffff; font-weight: 800; font-size: 12px;
     }
 
-    .area-strip {
-      display: grid; grid-template-columns: 1fr 1fr auto; gap: 5px; align-items: center;
+    .area-display {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      padding: 4px 2px 1px;
     }
-    .area-cell {
-      background: #fafafa; border: 1px solid #e5e7eb; border-radius: 7px; padding: 5px 7px; min-width: 0;
+    .area-title {
+      font-size: 15px; font-weight: 900; color: #111111; flex-shrink: 0;
     }
-    .area-cell.active-total { border-color: #ff1744; background: #fff5f7; }
-    .area-cell.active-sub { border-color: #d97706; background: #fffbeb; }
-    .area-label { font-size: 10px; color: #555; font-weight: 700; display: flex; justify-content: space-between; }
-    .area-main-red { font-size: 13px; font-weight: 800; color: #d50000; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .area-main-amber { font-size: 13px; font-weight: 800; color: #b45309; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .area-sub { font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .ratio-box { text-align: right; padding: 4px 5px; min-width: 58px; }
-    .ratio-val { font-size: 13px; font-weight: 800; color: #d50000; line-height: 1.2; }
-    .ratio-rem { font-size: 10px; color: #555; white-space: nowrap; }
+    .area-values {
+      font-size: 17px; font-weight: 900; color: #d50000; text-align: right; letter-spacing: -0.3px;
+    }
+    .area-pyeong {
+      color: #0f172a; font-size: 16px; font-weight: 900;
+    }
 
     .right-panel {
-      position: absolute; top: calc(144px + env(safe-area-inset-top)); right: 8px; z-index: 12;
+      position: absolute; top: calc(114px + env(safe-area-inset-top)); right: 8px; z-index: 12;
       display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
     }
     .layer-controls {
       display: flex; flex-direction: column; gap: 5px;
     }
     .layer-btn {
-      padding: 7px 9px; border: none; border-radius: 7px;
-      background: rgba(255,255,255,0.96); color: #222; font-size: 11px; font-weight: 700;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+      padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 7px;
+      background: #ffffff; color: #111111; font-size: 11px; font-weight: 800;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
-    .layer-btn.active { background: #0b57d0; color: #fff; }
+    .layer-btn.active { background: #0b57d0; color: #ffffff; border-color: #0b57d0; }
 
     .zoom-controls {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       margin-top: 2px;
     }
     .zoom-btn {
-      width: 40px; height: 40px; border: 1.5px solid #334155; border-radius: 9px;
+      width: 40px; height: 40px; border: 1.5px solid #111111; border-radius: 9px;
       background: #ffffff; color: #111111;
-      font-size: 22px; font-weight: 800; line-height: 1;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+      font-size: 22px; font-weight: 900; line-height: 1;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
       display: flex; align-items: center; justify-content: center;
     }
     .zoom-btn:active { background: #e2e8f0; }
     .zoom-badge {
-      font-size: 10px; font-weight: 700; color: #fff;
-      background: rgba(0,0,0,0.72); border-radius: 5px;
+      font-size: 10px; font-weight: 800; color: #ffffff;
+      background: #111111; border-radius: 5px;
       padding: 2px 6px; text-align: center;
     }
     .mag-btn {
-      width: 40px; padding: 5px 0; border: 1.5px solid #334155; border-radius: 8px;
-      background: rgba(255,255,255,0.96); color: #111;
-      font-size: 11px; font-weight: 800; text-align: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+      width: 40px; padding: 5px 0; border: 1.5px solid #111111; border-radius: 8px;
+      background: #ffffff; color: #111111;
+      font-size: 11px; font-weight: 900; text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
     .mag-btn.active {
-      background: #d50000; color: #fff; border-color: #d50000;
+      background: #d50000; color: #ffffff; border-color: #d50000;
     }
 
     .bottom-bar {
@@ -120,19 +119,19 @@
     }
     .action-btn {
       padding: 11px 4px; border: none; border-radius: 8px;
-      font-size: 12px; font-weight: 700; color: #fff;
-      box-shadow: 0 2px 7px rgba(0,0,0,0.22);
+      font-size: 12px; font-weight: 800; color: #ffffff;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.28);
     }
     .btn-gps { background: #2e7d32; }
-    .btn-undo { background: #555; }
+    .btn-undo { background: #475569; }
     .btn-clear { background: #c62828; }
     .btn-save { background: #0b57d0; }
 
     .saved-drawer {
       position: absolute; bottom: calc(58px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 15;
       max-height: 170px; overflow-y: auto;
-      background: rgba(255,255,255,0.98); border-radius: 9px;
-      padding: 9px; box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+      background: #ffffff; border: 1.5px solid #111111; border-radius: 9px;
+      padding: 9px; box-shadow: 0 4px 14px rgba(0,0,0,0.28);
       font-size: 12px; display: none;
     }
     .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #ddd; }
@@ -145,11 +144,6 @@
     .pt-dot-total {
       width: 11px; height: 11px; border-radius: 50%;
       background: #ff1744; border: 2px solid #ffffff;
-      box-shadow: 0 0 4px rgba(0,0,0,0.8);
-    }
-    .pt-dot-sub {
-      width: 11px; height: 11px; border-radius: 50%;
-      background: #f59e0b; border: 2px solid #ffffff;
       box-shadow: 0 0 4px rgba(0,0,0,0.8);
     }
 
@@ -190,22 +184,12 @@
     <button onclick="searchAddress()">이동</button>
   </div>
 
-  <div class="area-strip">
-    <div class="area-cell active-total" id="cellTotal" onclick="setMode('total')">
-      <div class="area-label"><span>① 전체</span><span><span id="cntTotal">0</span>점</span></div>
-      <div class="area-main-red" id="totalM2">0.0 ㎡</div>
-      <div class="area-sub" id="totalPyeong">0.0 평</div>
-    </div>
-    <div class="area-cell" id="cellSub" onclick="setMode('sub')">
-      <div class="area-label"><span>② 부분</span><span><span id="cntSub">0</span>점</span></div>
-      <div class="area-main-amber" id="subM2">0.0 ㎡</div>
-      <div class="area-sub" id="subPyeong">0.0 평</div>
-    </div>
-    <div class="ratio-box">
-      <div class="area-label" style="justify-content:flex-end;">비율</div>
-      <div class="ratio-val" id="ratioText">0.0%</div>
-      <div class="ratio-rem" id="remainText">잔여 0.0㎡</div>
-    </div>
+  <div class="area-display">
+    <span class="area-title">면적 (<span id="cntTotal">0</span>점):</span>
+    <span class="area-values">
+      <span id="totalM2">0.0 ㎡</span>
+      <span class="area-pyeong">(<span id="totalPyeong">0.0</span> 평)</span>
+    </span>
   </div>
 </div>
 
@@ -247,15 +231,15 @@
 <script>
   const STORAGE_KEY = 'farmland_measure_records_v1';
   let map, geocoder, myLocationOverlay = null;
-  let currentMode = 'total';
   let isSkyview = true;
   let isCadastral = false;
   let currentJibun = '';
   let magScale = 1;
 
   const state = {
-    total: { points: [], overlays: [], polygon: null },
-    sub: { points: [], overlays: [], polygon: null }
+    points: [],
+    overlays: [],
+    polygon: null
   };
 
   window.onload = function () {
@@ -267,14 +251,9 @@
     });
     geocoder = new kakao.maps.services.Geocoder();
 
-    state.total.polygon = new kakao.maps.Polygon({
+    state.polygon = new kakao.maps.Polygon({
       map: map, path: [], strokeWeight: 3, strokeColor: '#ff1744',
       strokeOpacity: 0.98, fillColor: '#ff1744', fillOpacity: 0.16
-    });
-
-    state.sub.polygon = new kakao.maps.Polygon({
-      map: map, path: [], strokeWeight: 3, strokeColor: '#f59e0b',
-      strokeOpacity: 0.98, fillColor: '#f59e0b', fillOpacity: 0.25
     });
 
     const viewport = document.getElementById('mapViewport');
@@ -319,7 +298,7 @@
 
     setTimeout(() => {
       if (map) map.relayout();
-    }, 160);
+    }, 140);
   }
 
   function updateZoomBadge() {
@@ -347,18 +326,11 @@
     }
   }
 
-  function setMode(mode) {
-    currentMode = mode;
-    document.getElementById('cellTotal').className = 'area-cell' + (mode === 'total' ? ' active-total' : '');
-    document.getElementById('cellSub').className = 'area-cell' + (mode === 'sub' ? ' active-sub' : '');
-  }
-
   function addPoint(latLng) {
-    const target = state[currentMode];
-    target.points.push(latLng);
+    state.points.push(latLng);
 
     const dot = document.createElement('div');
-    dot.className = currentMode === 'total' ? 'pt-dot-total' : 'pt-dot-sub';
+    dot.className = 'pt-dot-total';
 
     const overlay = new kakao.maps.CustomOverlay({
       position: latLng,
@@ -368,11 +340,9 @@
       zIndex: 4
     });
     overlay.setMap(map);
-    target.overlays.push(overlay);
+    state.overlays.push(overlay);
 
-    if (state.total.points.length === 1 && currentMode === 'total') {
-      updateAddressFromCoord(latLng);
-    } else if (!currentJibun && target.points.length === 1) {
+    if (state.points.length === 1) {
       updateAddressFromCoord(latLng);
     }
 
@@ -391,35 +361,23 @@
   }
 
   function updateCalculations() {
-    state.total.polygon.setPath(state.total.points);
-    state.sub.polygon.setPath(state.sub.points);
+    state.polygon.setPath(state.points);
 
-    const tM2 = state.total.points.length >= 3 ? state.total.polygon.getArea() : 0;
-    const sM2 = state.sub.points.length >= 3 ? state.sub.polygon.getArea() : 0;
+    const tM2 = state.points.length >= 3 ? state.polygon.getArea() : 0;
     const tPyeong = tM2 / 3.305785;
-    const sPyeong = sM2 / 3.305785;
 
-    document.getElementById('cntTotal').innerText = state.total.points.length;
-    document.getElementById('cntSub').innerText = state.sub.points.length;
+    document.getElementById('cntTotal').innerText = state.points.length;
     document.getElementById('totalM2').innerText = `${tM2.toFixed(1)} ㎡`;
-    document.getElementById('totalPyeong').innerText = `${tPyeong.toFixed(1)} 평`;
-    document.getElementById('subM2').innerText = `${sM2.toFixed(1)} ㎡`;
-    document.getElementById('subPyeong').innerText = `${sPyeong.toFixed(1)} 평`;
-
-    const ratio = (tM2 > 0 && sM2 > 0) ? ((sM2 / tM2) * 100) : 0;
-    const remain = Math.max(0, tM2 - sM2);
-    document.getElementById('ratioText').innerText = `${ratio.toFixed(1)}%`;
-    document.getElementById('remainText').innerText = `잔여 ${remain.toFixed(1)}㎡`;
+    document.getElementById('totalPyeong').innerText = tPyeong.toFixed(1);
   }
 
   function undoPoint() {
-    const target = state[currentMode];
-    if (target.points.length === 0) return;
-    target.points.pop();
-    const ov = target.overlays.pop();
+    if (state.points.length === 0) return;
+    state.points.pop();
+    const ov = state.overlays.pop();
     if (ov) ov.setMap(null);
 
-    if (state.total.points.length === 0 && state.sub.points.length === 0) {
+    if (state.points.length === 0) {
       currentJibun = '';
       document.getElementById('addressText').innerText = '지도 터치 시 지번 표시';
     }
@@ -427,14 +385,11 @@
   }
 
   function clearCurrent() {
-    ['total', 'sub'].forEach(key => {
-      state[key].points = [];
-      state[key].overlays.forEach(ov => ov.setMap(null));
-      state[key].overlays = [];
-    });
+    state.points = [];
+    state.overlays.forEach(ov => ov.setMap(null));
+    state.overlays = [];
     currentJibun = '';
     document.getElementById('addressText').innerText = '지도 터치 시 지번 표시';
-    setMode('total');
     updateCalculations();
   }
 
@@ -515,15 +470,12 @@
   }
 
   function saveRecord() {
-    const tM2 = state.total.points.length >= 3 ? state.total.polygon.getArea() : 0;
-    const sM2 = state.sub.points.length >= 3 ? state.sub.polygon.getArea() : 0;
-    if (tM2 === 0 && sM2 === 0) {
+    if (state.points.length < 3) {
       alert('최소 3개 이상의 지점을 찍어 면적을 계산한 후 저장하세요.');
       return;
     }
+    const tM2 = state.polygon.getArea();
     const tPyeong = tM2 / 3.305785;
-    const sPyeong = sM2 / 3.305785;
-    const ratio = (tM2 > 0 && sM2 > 0) ? ((sM2 / tM2) * 100).toFixed(1) : '0.0';
 
     const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     records.unshift({
@@ -531,9 +483,6 @@
       address: currentJibun || '주소 미확인',
       totalM2: tM2.toFixed(1),
       totalPyeong: tPyeong.toFixed(1),
-      subM2: sM2.toFixed(1),
-      subPyeong: sPyeong.toFixed(1),
-      ratio: ratio,
       date: new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
@@ -553,7 +502,7 @@
       <div class="saved-item">
         <div style="line-height:1.4;">
           <strong>${r.address}</strong> <span style="color:#888;">(${r.date})</span><br/>
-          전체: ${r.totalM2}㎡(${r.totalPyeong}평) | 부분: ${r.subM2}㎡ (${r.ratio}%)
+          면적: ${r.totalM2} ㎡ (${r.totalPyeong} 평)
         </div>
         <button class="mini-btn" onclick="copyOneRecord(${r.id})">복사</button>
       </div>
@@ -564,15 +513,15 @@
     const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     const r = records.find(item => item.id === id);
     if (!r) return;
-    const line = `${r.address}\t${r.totalM2}\t${r.totalPyeong}\t${r.subM2}\t${r.subPyeong}\t${r.ratio}%`;
+    const line = `${r.address}\t${r.totalM2}\t${r.totalPyeong}`;
     navigator.clipboard.writeText(line).then(() => alert('엑셀 한 줄 형식으로 복사되었습니다.'));
   }
 
   function copyAllRecords() {
     const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     if (records.length === 0) return;
-    const header = '지번주소\t전체면적(㎡)\t전체평수\t부분면적(㎡)\t부분평수\t비율(%)';
-    const lines = records.map(r => `${r.address}\t${r.totalM2}\t${r.totalPyeong}\t${r.subM2}\t${r.subPyeong}\t${r.ratio}%`);
+    const header = '지번주소\t면적(㎡)\t평수(평)';
+    const lines = records.map(r => `${r.address}\t${r.totalM2}\t${r.totalPyeong}`);
     navigator.clipboard.writeText([header, ...lines].join('\n')).then(() => alert('전체 목록이 엑셀 붙여넣기 형식으로 복사되었습니다.'));
   }
 
