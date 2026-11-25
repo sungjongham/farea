@@ -17,18 +17,9 @@
       overflow: hidden; overscroll-behavior: none; touch-action: none;
       background: #111;
     }
+    #map { width: 100%; height: 100%; height: 100dvh; }
 
-    #mapViewport {
-      position: relative; width: 100%; height: 100%; height: 100dvh; overflow: hidden;
-    }
-    #mapStage {
-      position: relative; width: 100%; height: 100%;
-      transform-origin: 50% 50%;
-      will-change: transform;
-    }
-    #map { width: 100%; height: 100%; }
-
-    /* 상단 창: 주소 + 면적(㎡, 평)만 간결하게 표시 */
+    /* 상단 창: 주소 + 면적(㎡, 평)만 표시 */
     .top-panel {
       position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
       background: #ffffff; border: 2px solid #111111; border-radius: 10px;
@@ -73,7 +64,7 @@
 
     .right-panel {
       position: absolute; top: calc(114px + env(safe-area-inset-top)); right: 8px; z-index: 12;
-      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
     }
     .layer-controls {
       display: flex; flex-direction: column; gap: 5px;
@@ -87,7 +78,6 @@
 
     .zoom-controls {
       display: flex; flex-direction: column; align-items: center; gap: 4px;
-      margin-top: 2px;
     }
     .zoom-btn {
       width: 40px; height: 40px; border: 1.5px solid #111111; border-radius: 9px;
@@ -101,15 +91,6 @@
       font-size: 10px; font-weight: 800; color: #ffffff;
       background: #111111; border-radius: 5px;
       padding: 2px 6px; text-align: center;
-    }
-    .mag-btn {
-      width: 40px; padding: 5px 0; border: 1.5px solid #111111; border-radius: 8px;
-      background: #ffffff; color: #111111;
-      font-size: 11px; font-weight: 900; text-align: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    }
-    .mag-btn.active {
-      background: #d50000; color: #ffffff; border-color: #d50000;
     }
 
     .bottom-bar {
@@ -163,11 +144,7 @@
 </head>
 <body>
 
-<div id="mapViewport">
-  <div id="mapStage">
-    <div id="map"></div>
-  </div>
-</div>
+<div id="map"></div>
 
 <div class="top-panel">
   <div class="addr-row">
@@ -203,9 +180,6 @@
     <button class="zoom-btn" onclick="zoomIn()" title="확대">+</button>
     <div class="zoom-badge" id="zoomBadge">L1</div>
     <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
-    <button class="mag-btn active" id="mag10" onclick="setMagnification(1)">×1.0</button>
-    <button class="mag-btn" id="mag15" onclick="setMagnification(1.5)">×1.5</button>
-    <button class="mag-btn" id="mag20" onclick="setMagnification(2)">×2.0</button>
   </div>
 </div>
 
@@ -233,7 +207,6 @@
   let isSkyview = true;
   let isCadastral = false;
   let currentJibun = '';
-  let magScale = 1;
 
   const state = {
     points: [],
@@ -255,50 +228,15 @@
       strokeOpacity: 0.98, fillColor: '#ff1744', fillOpacity: 0.16
     });
 
-    const viewport = document.getElementById('mapViewport');
-    const mapEl = document.getElementById('map');
-
-    viewport.addEventListener('click', function (e) {
-      if (e.target.closest('.top-panel, .right-panel, .bottom-bar, .saved-drawer')) return;
-
-      const vpRect = viewport.getBoundingClientRect();
-      const mapRect = mapEl.getBoundingClientRect();
-      const proj = map.getProjection();
-      if (!proj) return;
-
-      const screenX = e.clientX - vpRect.left;
-      const screenY = e.clientY - vpRect.top;
-      const vpCenterX = vpRect.width / 2;
-      const vpCenterY = vpRect.height / 2;
-
-      const stageX = vpCenterX + (screenX - vpCenterX) / magScale;
-      const stageY = vpCenterY + (screenY - vpCenterY) / magScale;
-
-      const mapOffsetX = (mapRect.left - vpRect.left) / magScale;
-      const mapOffsetY = (mapRect.top - vpRect.top) / magScale;
-
-      const pt = new kakao.maps.Point(stageX - mapOffsetX, stageY - mapOffsetY);
-      const latLng = proj.coordsFromPoint(pt);
-      addPoint(latLng);
-    }, true);
+    kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
+      addPoint(mouseEvent.latLng);
+    });
 
     kakao.maps.event.addListener(map, 'zoom_changed', updateZoomBadge);
     updateZoomBadge();
     renderSavedList();
     moveToMyLocation(true);
   };
-
-  function setMagnification(scale) {
-    magScale = scale;
-    const stage = document.getElementById('mapStage');
-    stage.style.transform = `scale(${scale})`;
-
-    document.getElementById('mag10').classList.toggle('active', scale === 1);
-    document.getElementById('mag15').classList.toggle('active', scale === 1.5);
-    document.getElementById('mag20').classList.toggle('active', scale === 2);
-
-    if (map) map.relayout();
-  }
 
   function updateZoomBadge() {
     if (!map) return;
