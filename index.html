@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>농지 주소·면적 측정기</title>
+  <!-- 카카오맵 SDK (services 라이브러리 필수) -->
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=25bd6279b09da3619d1cfc1619d628f2&libraries=services"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body, html { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; overflow: hidden; }
+    #map { width: 100%; height: 100%; }
+
+    /* 상단 정보 카드 */
+    .top-panel {
+      position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10;
+      background: rgba(255, 255, 255, 0.96); border-radius: 12px;
+      padding: 10px 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    }
+    .search-row { display: flex; gap: 6px; margin-bottom: 7px; }
+    .search-row input {
+      flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px;
+    }
+    .search-row button {
+      padding: 8px 12px; border: none; border-radius: 8px; background: #222; color: #fff; font-weight: 700; font-size: 13px;
+    }
+    .addr-box {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #f3f5f8; padding: 7px 10px; border-radius: 8px; margin-bottom: 8px;
+    }
+    .addr-text { font-size: 13px; font-weight: 700; color: #111; line-height: 1.35; word-break: keep-all; }
+    .mini-btn {
+      padding: 5px 8px; font-size: 11px; font-weight: 700; border: 1px solid #bbb;
+      background: #fff; border-radius: 6px; flex-shrink: 0; margin-left: 6px;
+    }
+
+    /* 측정 모드 탭 (전체 vs 부분) */
+    .mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .mode-tab {
+      padding: 7px 6px; border: 1.5px solid #d0d7de; border-radius: 8px;
+      background: #fff; font-size: 12px; font-weight: 700; color: #444; text-align: center;
+    }
+    .mode-tab.active-total { border-color: #0b57d0; background: #e8f0fe; color: #0b57d0; }
+    .mode-tab.active-sub { border-color: #d93025; background: #fce8e6; color: #d93025; }
+
+    /* 결과 수치 표시 */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .stat-box { background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 6px 8px; }
+    .stat-label { font-size: 11px; color: #666; font-weight: 600; }
+    .stat-val-blue { font-size: 15px; font-weight: 800; color: #0b57d0; margin-top: 2px; }
+    .stat-val-red { font-size: 15px; font-weight: 800; color: #d93025; margin-top: 2px; }
+    .stat-sub { font-size: 11px; color: #555; }
+    .ratio-bar {
+      margin-top: 6px; padding-top: 6px; border-top: 1px dashed #ddd;
+      display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #222;
+    }
+
+    /* 우측 레이어 토글 버튼 */
+    .layer-controls {
+      position: absolute; top: 245px; right: 10px; z-index: 10;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .layer-btn {
+      padding: 9px 10px; border: none; border-radius: 8px;
+      background: #fff; color: #222; font-size: 12px; font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+    }
+    .layer-btn.active { background: #0b57d0; color: #fff; }
+
+    /* 하단 컨트롤 바 */
+    .bottom-bar {
+      position: absolute; bottom: 14px; left: 10px; right: 10px; z-index: 10;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    }
+    .action-btn {
+      padding: 12px 4px; border: none; border-radius: 10px;
+      font-size: 13px; font-weight: 700; color: #fff;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    }
+    .btn-gps { background: #2e7d32; }
+    .btn-undo { background: #555; }
+    .btn-clear { background: #c62828; }
+    .btn-save { background: #0b57d0; }
+
+    /* 저장 목록 드로어 */
+    .saved-drawer {
+      position: absolute; bottom: 68px; left: 10px; right: 10px; z-index: 15;
+      max-height: 180px; overflow-y: auto;
+      background: rgba(255,255,255,0.98); border-radius: 10px;
+      padding: 10px; box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+      font-size: 12px; display: none;
+    }
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #ddd; }
+    .saved-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid #eee;
+    }
+    .saved-item:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="top-panel">
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="지번·도로명 검색 (예: 판포리 1234)" onkeypress="if(event.key==='Enter') searchAddress()" />
+    <button onclick="searchAddress()">이동</button>
+  </div>
+
+  <div class="addr-box">
+    <div class="addr-text" id="addressText">지도를 터치하면 지번 주소가 추출됩니다</div>
+    <button class="mini-btn" onclick="copyAddress()">주소복사</button>
+  </div>
+
+  <div class="mode-tabs">
+    <div class="mode-tab active-total" id="tabTotal" onclick="setMode('total')">① 전체 면적 찍기</div>
+    <div class="mode-tab" id="tabSub" onclick="setMode('sub')">② 부분(피해) 면적 찍기</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-label">전체 면적 (<span id="cntTotal">0</span>점)</div>
+      <div class="stat-val-blue" id="totalM2">0.0 ㎡</div>
+      <div class="stat-sub" id="totalPyeong">0.0 평</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">부분 면적 (<span id="cntSub">0</span>점)</div>
+      <div class="stat-val-red" id="subM2">0.0 ㎡</div>
+      <div class="stat-sub" id="subPyeong">0.0 평</div>
+    </div>
+  </div>
+
+  <div class="ratio-bar">
+    <span>부분/전체 비율: <strong id="ratioText" style="color:#d93025;">0.0%</strong></span>
+    <span id="remainText" style="color:#555;">잔여: 0.0 ㎡</span>
+  </div>
+</div>
+
+<div class="layer-controls">
+  <button class="layer-btn" id="btnSky" onclick="toggleSkyview()">위성지도</button>
+  <button class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
+  <button class="layer-btn" id="btnList" onclick="toggleSavedList()">저장목록</button>
+</div>
+
+<div class="saved-drawer" id="savedDrawer">
+  <div class="drawer-header">
+    <strong>저장된 농지 측정 기록</strong>
+    <div>
+      <button class="mini-btn" onclick="copyAllRecords()">전체 엑셀복사</button>
+      <button class="mini-btn" style="color:#c62828;" onclick="clearAllRecords()">전체삭제</button>
+    </div>
+  </div>
+  <div id="savedListBody"></div>
+</div>
+
+<div class="bottom-bar">
+  <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
+  <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
+  <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
+  <button class="action-btn btn-save" onclick="saveRecord()">기록 저장</button>
+</div>
+
+<script>
+  const STORAGE_KEY = 'farmland_measure_records_v1';
+  let map, geocoder;
+  let currentMode = 'total'; // 'total' 또는 'sub'
+  let isSkyview = false;
+  let isCadastral = false;
+  let currentJibun = '';
+
+  const state = {
+    total: { points: [], markers: [], polygon: null },
+    sub: { points: [], markers: [], polygon: null }
+  };
+
+  window.onload = function () {
+    const container = document.getElementById('map');
+    map = new kakao.maps.Map(container, {
+      center: new kakao.maps.LatLng(33.3617, 126.5292),
+      level: 3
+    });
+    geocoder = new kakao.maps.services.Geocoder();
+
+    state.total.polygon = new kakao.maps.Polygon({
+      map: map, path: [], strokeWeight: 3, strokeColor: '#0b57d0',
+      strokeOpacity: 0.95, fillColor: '#0b57d0', fillOpacity: 0.22
+    });
+
+    state.sub.polygon = new kakao.maps.Polygon({
+      map: map, path: [], strokeWeight: 3, strokeColor: '#d93025',
+      strokeOpacity: 0.95, fillColor: '#d93025', fillOpacity: 0.32
+    });
+
+    kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
+      addPoint(mouseEvent.latLng);
+    });
+
+    moveToMyLocation();
+    renderSavedList();
+  };
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('tabTotal').className = 'mode-tab' + (mode === 'total' ? ' active-total' : '');
+    document.getElementById('tabSub').className = 'mode-tab' + (mode === 'sub' ? ' active-sub' : '');
+  }
+
+  function addPoint(latLng) {
+    const target = state[currentMode];
+    target.points.push(latLng);
+
+    const marker = new kakao.maps.Marker({
+      position: latLng,
+      draggable: true,
+      map: map
+    });
+
+    kakao.maps.event.addListener(marker, 'dragend', function () {
+      const idx = target.markers.indexOf(marker);
+      if (idx > -1) {
+        target.points[idx] = marker.getPosition();
+        if (currentMode === 'total' && idx === 0) updateAddressFromCoord(target.points[0]);
+        updateCalculations();
+      }
+    });
+
+    target.markers.push(marker);
+
+    // 첫 핀이 찍히면 지번 주소 자동 추출
+    if (state.total.points.length === 1 && currentMode === 'total') {
+      updateAddressFromCoord(latLng);
+    } else if (!currentJibun && target.points.length === 1) {
+      updateAddressFromCoord(latLng);
+    }
+
+    updateCalculations();
+  }
+
+  function updateAddressFromCoord(latLng) {
+    geocoder.coord2Address(latLng.getLng(), latLng.getLat(), function (result, status) {
+      if (status === kakao.maps.services.Status.OK && result[0]) {
+        const jibun = result[0].address ? result[0].address.address_name : '';
+        const road = result[0].road_address ? result[0].road_address.address_name : '';
+        currentJibun = jibun || road;
+        document.getElementById('addressText').innerText = jibun || road;
+      }
+    });
+  }
+
+  function updateCalculations() {
+    state.total.polygon.setPath(state.total.points);
+    state.sub.polygon.setPath(state.sub.points);
+
+    const tM2 = state.total.points.length >= 3 ? state.total.polygon.getArea() : 0;
+    const sM2 = state.sub.points.length >= 3 ? state.sub.polygon.getArea() : 0;
+    const tPyeong = tM2 / 3.305785;
+    const sPyeong = sM2 / 3.305785;
+
+    document.getElementById('cntTotal').innerText = state.total.points.length;
+    document.getElementById('cntSub').innerText = state.sub.points.length;
+    document.getElementById('totalM2').innerText = `${tM2.toFixed(1)} ㎡`;
+    document.getElementById('totalPyeong').innerText = `${tPyeong.toFixed(1)} 평`;
+    document.getElementById('subM2').innerText = `${sM2.toFixed(1)} ㎡`;
+    document.getElementById('subPyeong').innerText = `${sPyeong.toFixed(1)} 평`;
+
+    const ratio = (tM2 > 0 && sM2 > 0) ? ((sM2 / tM2) * 100) : 0;
+    const remain = Math.max(0, tM2 - sM2);
+    document.getElementById('ratioText').innerText = `${ratio.toFixed(1)}%`;
+    document.getElementById('remainText').innerText = `잔여: ${remain.toFixed(1)} ㎡`;
+  }
+
+  function undoPoint() {
+    const target = state[currentMode];
+    if (target.points.length === 0) return;
+    target.points.pop();
+    const m = target.markers.pop();
+    if (m) m.setMap(null);
+
+    if (state.total.points.length === 0 && state.sub.points.length === 0) {
+      currentJibun = '';
+      document.getElementById('addressText').innerText = '지도를 터치하면 지번 주소가 추출됩니다';
+    }
+    updateCalculations();
+  }
+
+  function clearCurrent() {
+    ['total', 'sub'].forEach(key => {
+      state[key].points = [];
+      state[key].markers.forEach(m => m.setMap(null));
+      state[key].markers = [];
+    });
+    currentJibun = '';
+    document.getElementById('addressText').innerText = '지도를 터치하면 지번 주소가 추출됩니다';
+    setMode('total');
+    updateCalculations();
+  }
+
+  function toggleSkyview() {
+    isSkyview = !isSkyview;
+    map.setMapTypeId(isSkyview ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP);
+    document.getElementById('btnSky').classList.toggle('active', isSkyview);
+  }
+
+  function toggleCadastral() {
+    isCadastral = !isCadastral;
+    if (isCadastral) {
+      map.addOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
+    } else {
+      map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
+    }
+    document.getElementById('btnCadastral').classList.toggle('active', isCadastral);
+  }
+
+  function moveToMyLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+      const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+      map.setCenter(loc);
+      map.setLevel(2);
+    });
+  }
+
+  function searchAddress() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    geocoder.addressSearch(query, function (result, status) {
+      if (status === kakao.maps.services.Status.OK) {
+        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+        map.setCenter(coords);
+        map.setLevel(2);
+      } else {
+        alert('주소를 찾을 수 없습니다. 지번이나 도로명을 정확히 입력해 주세요.');
+      }
+    });
+  }
+
+  function copyAddress() {
+    if (!currentJibun) return;
+    navigator.clipboard.writeText(currentJibun).then(() => {
+      alert('지번 복사됨: ' + currentJibun);
+    });
+  }
+
+  function saveRecord() {
+    const tM2 = state.total.points.length >= 3 ? state.total.polygon.getArea() : 0;
+    const sM2 = state.sub.points.length >= 3 ? state.sub.polygon.getArea() : 0;
+    if (tM2 === 0 && sM2 === 0) {
+      alert('최소 3개 이상의 지점을 찍어 면적을 계산한 후 저장하세요.');
+      return;
+    }
+    const tPyeong = tM2 / 3.305785;
+    const sPyeong = sM2 / 3.305785;
+    const ratio = (tM2 > 0 && sM2 > 0) ? ((sM2 / tM2) * 100).toFixed(1) : '0.0';
+
+    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    records.unshift({
+      id: Date.now(),
+      address: currentJibun || '주소 미확인',
+      totalM2: tM2.toFixed(1),
+      totalPyeong: tPyeong.toFixed(1),
+      subM2: sM2.toFixed(1),
+      subPyeong: sPyeong.toFixed(1),
+      ratio: ratio,
+      date: new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    renderSavedList();
+    document.getElementById('savedDrawer').style.display = 'block';
+    document.getElementById('btnList').classList.add('active');
+  }
+
+  function renderSavedList() {
+    const body = document.getElementById('savedListBody');
+    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (records.length === 0) {
+      body.innerHTML = '<div style="color:#777; text-align:center; padding:10px 0;">저장된 기록이 없습니다.</div>';
+      return;
+    }
+    body.innerHTML = records.map(r => `
+      <div class="saved-item">
+        <div style="line-height:1.4;">
+          <strong>${r.address}</strong> <span style="color:#888;">(${r.date})</span><br/>
+          전체: ${r.totalM2}㎡(${r.totalPyeong}평) | 부분: ${r.subM2}㎡ (${r.ratio}%)
+        </div>
+        <button class="mini-btn" onclick="copyOneRecord(${r.id})">복사</button>
+      </div>
+    `).join('');
+  }
+
+  function copyOneRecord(id) {
+    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const r = records.find(item => item.id === id);
+    if (!r) return;
+    const line = `${r.address}\t${r.totalM2}\t${r.totalPyeong}\t${r.subM2}\t${r.subPyeong}\t${r.ratio}%`;
+    navigator.clipboard.writeText(line).then(() => alert('엑셀 한 줄 형식으로 복사되었습니다.'));
+  }
+
+  function copyAllRecords() {
+    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (records.length === 0) return;
+    const header = '지번주소\t전체면적(㎡)\t전체평수\t부분면적(㎡)\t부분평수\t비율(%)';
+    const lines = records.map(r => `${r.address}\t${r.totalM2}\t${r.totalPyeong}\t${r.subM2}\t${r.subPyeong}\t${r.ratio}%`);
+    navigator.clipboard.writeText([header, ...lines].join('\n')).then(() => alert('전체 목록이 엑셀 붙여넣기 형식으로 복사되었습니다.'));
+  }
+
+  function clearAllRecords() {
+    if (!confirm('저장된 측정 기록을 모두 삭제할까요?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    renderSavedList();
+  }
+
+  function toggleSavedList() {
+    const drawer = document.getElementById('savedDrawer');
+    const isOpen = drawer.style.display === 'block';
+    drawer.style.display = isOpen ? 'none' : 'block';
+    document.getElementById('btnList').classList.toggle('active', !isOpen);
+  }
+</script>
+</body>
+</html>
