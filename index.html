@@ -66,21 +66,12 @@
     }
     .layer-btn.active { background: #0b57d0; color: #fff; }
 
-    .bottom-wrap {
+    .bottom-bar {
       position: absolute; bottom: 10px; left: 8px; right: 8px; z-index: 10;
-      display: flex; flex-direction: column; gap: 5px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
     }
-    .pin-toggle-btn {
-      width: 100%; padding: 8px; border: none; border-radius: 8px;
-      font-size: 12px; font-weight: 800; color: #fff;
-      box-shadow: 0 2px 7px rgba(0,0,0,0.22);
-    }
-    .pin-on { background: #d50000; }
-    .pin-off { background: #37474f; }
-
-    .bottom-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
     .action-btn {
-      padding: 10px 4px; border: none; border-radius: 8px;
+      padding: 11px 4px; border: none; border-radius: 8px;
       font-size: 12px; font-weight: 700; color: #fff;
       box-shadow: 0 2px 7px rgba(0,0,0,0.22);
     }
@@ -90,7 +81,7 @@
     .btn-save { background: #0b57d0; }
 
     .saved-drawer {
-      position: absolute; bottom: 96px; left: 8px; right: 8px; z-index: 15;
+      position: absolute; bottom: 58px; left: 8px; right: 8px; z-index: 15;
       max-height: 170px; overflow-y: auto;
       background: rgba(255,255,255,0.98); border-radius: 9px;
       padding: 9px; box-shadow: 0 4px 14px rgba(0,0,0,0.22);
@@ -103,29 +94,27 @@
     }
     .saved-item:last-child { border-bottom: none; }
 
-    /* 소형 점 포인트 (윤곽 가림 최소화) */
-    .tiny-pt-total {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #ff1744; border: 1.5px solid #ffffff;
-      box-shadow: 0 0 3px rgba(0,0,0,0.75);
+    .pt-dot-total {
+      width: 11px; height: 11px; border-radius: 50%;
+      background: #ff1744; border: 2px solid #ffffff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.8);
     }
-    .tiny-pt-sub {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #f59e0b; border: 1.5px solid #ffffff;
-      box-shadow: 0 0 3px rgba(0,0,0,0.75);
+    .pt-dot-sub {
+      width: 11px; height: 11px; border-radius: 50%;
+      background: #f59e0b; border: 2px solid #ffffff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.8);
     }
 
-    /* 내 위치 노란 점 */
     .yellow-dot-wrap {
-      position: relative; width: 22px; height: 22px;
+      position: relative; width: 24px; height: 24px;
       display: flex; align-items: center; justify-content: center;
     }
     .yellow-dot-pulse {
-      position: absolute; width: 22px; height: 22px; border-radius: 50%;
+      position: absolute; width: 24px; height: 24px; border-radius: 50%;
       background: rgba(255, 214, 0, 0.35);
     }
     .yellow-dot-core {
-      position: relative; width: 12px; height: 12px; border-radius: 50%;
+      position: relative; width: 13px; height: 13px; border-radius: 50%;
       background: #ffd600; border: 2px solid #ffffff;
       box-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
     }
@@ -185,21 +174,17 @@
   <div id="savedListBody"></div>
 </div>
 
-<div class="bottom-wrap">
-  <button class="pin-toggle-btn pin-on" id="btnPinMode" onclick="togglePinMode()">● 핀 찍기 ON (줌·이동 자유)</button>
-  <div class="bottom-bar">
-    <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
-    <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
-    <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
-    <button class="action-btn btn-save" onclick="saveRecord()">기록 저장</button>
-  </div>
+<div class="bottom-bar">
+  <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
+  <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
+  <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
+  <button class="action-btn btn-save" onclick="saveRecord()">기록 저장</button>
 </div>
 
 <script>
   const STORAGE_KEY = 'farmland_measure_records_v1';
   let map, geocoder, myLocationOverlay = null;
   let currentMode = 'total';
-  let isPinMode = true;
   let isSkyview = false;
   let isCadastral = false;
   let currentJibun = '';
@@ -213,7 +198,7 @@
     const container = document.getElementById('map');
     map = new kakao.maps.Map(container, {
       center: new kakao.maps.LatLng(33.3617, 126.5292),
-      level: 2
+      level: 1
     });
     geocoder = new kakao.maps.services.Geocoder();
 
@@ -228,7 +213,6 @@
     });
 
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      if (!isPinMode) return;
       addPoint(mouseEvent.latLng);
     });
 
@@ -243,18 +227,6 @@
     }
   }
 
-  function togglePinMode() {
-    isPinMode = !isPinMode;
-    const btn = document.getElementById('btnPinMode');
-    if (isPinMode) {
-      btn.className = 'pin-toggle-btn pin-on';
-      btn.innerText = '● 핀 찍기 ON (줌·이동 자유)';
-    } else {
-      btn.className = 'pin-toggle-btn pin-off';
-      btn.innerText = '○ 이동·확대 전용 모드 (핀 안 찍힘)';
-    }
-  }
-
   function setMode(mode) {
     currentMode = mode;
     document.getElementById('cellTotal').className = 'area-cell' + (mode === 'total' ? ' active-total' : '');
@@ -266,7 +238,7 @@
     target.points.push(latLng);
 
     const dot = document.createElement('div');
-    dot.className = currentMode === 'total' ? 'tiny-pt-total' : 'tiny-pt-sub';
+    dot.className = currentMode === 'total' ? 'pt-dot-total' : 'pt-dot-sub';
 
     const overlay = new kakao.maps.CustomOverlay({
       position: latLng,
