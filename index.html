@@ -120,29 +120,26 @@
       padding: 2px 6px; text-align: center;
     }
 
-    /* 하단 영역: 중앙 점 찍기 버튼 + 4개 기능 버튼 */
+    /* 하단 영역: 4개 아이콘 버튼 */
     .bottom-wrap {
       position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 10;
       display: flex; flex-direction: column; gap: 6px;
     }
-    .center-shot-row {
-      display: flex; justify-content: center;
-    }
-    .btn-center-add {
-      padding: 9px 18px; border: 2px solid #ffffff; border-radius: 20px;
-      background: rgba(17, 24, 39, 0.92); color: #ffffff;
-      font-size: 12px; font-weight: 900;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
-    }
-    .btn-center-add:active { background: #0b57d0; }
 
     .bottom-bar {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
     }
     .action-btn {
-      padding: 11px 4px; border: none; border-radius: 8px;
-      font-size: 12px; font-weight: 800; color: #ffffff;
+      height: 46px; border: none; border-radius: 10px;
+      color: #ffffff;
       box-shadow: 0 2px 7px rgba(0,0,0,0.28);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .action-btn:active { transform: scale(0.97); }
+    .action-btn svg {
+      width: 21px; height: 21px;
+      stroke: currentColor; fill: none;
+      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
     }
     .btn-gps { background: #2e7d32; }
     .btn-undo { background: #475569; }
@@ -212,7 +209,6 @@
     <div class="addr-text" id="addressText">지도 터치 시 지번 표시</div>
     <div class="addr-actions">
       <button class="mini-btn" onclick="toggleSearch()">검색</button>
-      <button class="mini-btn" onclick="copyAddress()">복사</button>
     </div>
   </div>
 
@@ -244,24 +240,59 @@
 </div>
 
 <div class="bottom-wrap">
-  <div class="center-shot-row">
-    <button class="btn-center-add" onclick="addPointAtCenter()">+ 중앙에 점 찍기</button>
-  </div>
   <div class="bottom-bar">
-    <button class="action-btn btn-gps" onclick="moveToMyLocation()">내 위치</button>
-    <button class="action-btn btn-undo" onclick="undoPoint()">이전점 취소</button>
-    <button class="action-btn btn-clear" onclick="clearCurrent()">현재 초기화</button>
-    <button class="action-btn btn-capture" onclick="toggleCaptureMode()">캡처모드</button>
+    <!-- 내 위치: GPS 조준점 -->
+    <button class="action-btn btn-gps" onclick="moveToMyLocation()" title="내 위치" aria-label="내 위치">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="6"></circle>
+        <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"></circle>
+        <line x1="12" y1="2" x2="12" y2="5"></line>
+        <line x1="12" y1="19" x2="12" y2="22"></line>
+        <line x1="2" y1="12" x2="5" y2="12"></line>
+        <line x1="19" y1="12" x2="22" y2="12"></line>
+      </svg>
+    </button>
+
+    <!-- 이전점 취소: 되돌리기 화살표 -->
+    <button class="action-btn btn-undo" onclick="undoPoint()" title="이전점 취소" aria-label="이전점 취소">
+      <svg viewBox="0 0 24 24">
+        <polyline points="9 14 4 9 9 4"></polyline>
+        <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+      </svg>
+    </button>
+
+    <!-- 현재 초기화: 휴지통 -->
+    <button class="action-btn btn-clear" onclick="clearCurrent()" title="현재 초기화" aria-label="현재 초기화">
+      <svg viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+      </svg>
+    </button>
+
+    <!-- 캡처모드: 화면 캡처 프레임 -->
+    <button class="action-btn btn-capture" onclick="toggleCaptureMode()" title="캡처모드" aria-label="캡처모드">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 8V5a2 2 0 0 1 2-2h3"></path>
+        <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+        <path d="M21 16v3a2 2 0 0 1-2 2h-3"></path>
+        <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+        <rect x="8" y="8" width="8" height="8" rx="1"></rect>
+      </svg>
+    </button>
   </div>
 </div>
 
 <button class="exit-capture-btn" onclick="toggleCaptureMode()">편집 복귀</button>
 
 <script>
-  let map, geocoder, myLocationOverlay = null;
+  let map, geocoder, myLocationOverlay = null, watchId = null;
   let isSkyview = true;
   let isCadastral = false;
   let isCaptureMode = false;
+  let isDraggingMap = false;
   let currentJibun = '';
   let draggingIndex = null;
 
@@ -286,14 +317,30 @@
       strokeOpacity: 0.98, fillColor: '#ff1744', fillOpacity: 0.16
     });
 
+    kakao.maps.event.addListener(map, 'dragstart', function () {
+      isDraggingMap = true;
+    });
+
+    kakao.maps.event.addListener(map, 'dragend', function () {
+      setTimeout(() => {
+        isDraggingMap = false;
+      }, 200);
+    });
+
     kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      if (isCaptureMode || draggingIndex !== null) return;
+      if (isCaptureMode || draggingIndex !== null || isDraggingMap) return;
+      const searchBar = document.getElementById('searchBar');
+      if (searchBar.classList.contains('open')) {
+        searchBar.classList.remove('open');
+        return;
+      }
       addPoint(mouseEvent.latLng);
     });
 
     kakao.maps.event.addListener(map, 'zoom_changed', updateZoomBadge);
     updateZoomBadge();
     moveToMyLocation(true);
+    startWatchMyLocation();
 
     // 점 드래그 이동용 전역 포인터 이벤트
     window.addEventListener('pointermove', handlePointDragMove, { passive: false });
@@ -327,11 +374,6 @@
     if (movedIdx === 0 && state.points[0]) {
       updateAddressFromCoord(state.points[0]);
     }
-  }
-
-  function addPointAtCenter() {
-    if (isCaptureMode || !map) return;
-    addPoint(map.getCenter());
   }
 
   function toggleCaptureMode() {
@@ -382,7 +424,6 @@
       if (isCaptureMode) return;
       e.stopPropagation();
       e.preventDefault();
-      // 현재 배열에서 이 오버레이의 실시간 인덱스 찾기
       const currentIdx = state.overlays.indexOf(overlay);
       if (currentIdx === -1) return;
       draggingIndex = currentIdx;
@@ -484,6 +525,20 @@
     myLocationOverlay.setMap(map);
   }
 
+  function startWatchMyLocation() {
+    if (!navigator.geolocation || !map) return;
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+
+    watchId = navigator.geolocation.watchPosition(
+      pos => {
+        const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        showYellowDot(loc);
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+    );
+  }
+
   function moveToMyLocation(silent) {
     if (!navigator.geolocation) {
       if (!silent) alert('이 기기에서 위치 정보를 지원하지 않습니다.');
@@ -491,39 +546,4 @@
     }
     navigator.geolocation.getCurrentPosition(
       pos => {
-        const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        showYellowDot(loc);
-        map.setCenter(loc);
-        map.setLevel(1);
-      },
-      () => {
-        if (!silent) alert('위치 권한을 허용해 주세요.');
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  }
-
-  function searchAddress() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) return;
-    geocoder.addressSearch(query, function (result, status) {
-      if (status === kakao.maps.services.Status.OK) {
-        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
-        map.setCenter(coords);
-        map.setLevel(1);
-        document.getElementById('searchBar').classList.remove('open');
-      } else {
-        alert('주소를 찾을 수 없습니다. 지번이나 도로명을 정확히 입력해 주세요.');
-      }
-    });
-  }
-
-  function copyAddress() {
-    if (!currentJibun) return;
-    navigator.clipboard.writeText(currentJibun).then(() => {
-      alert('지번 복사됨: ' + currentJibun);
-    });
-  }
-</script>
-</body>
-</html>
+        const loc = new kakao.maps.
