@@ -301,4 +301,963 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     }
     .btn-gps { background: #15803d; color: #fff; }
-    .btn-undo { background: #374151; color: #fff; font-size: 20
+    .btn-undo { background: #374151; color: #fff; font-size: 20px; }
+    .btn-reset { background: #dc2626; color: #fff; }
+    .btn-capture { background: #1d4ed8; color: #fff; font-size: 20px; }
+
+    /* 히스토리 모달/시트 */
+    .history-panel {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: calc(74px + env(safe-area-inset-bottom));
+      z-index: 30;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      padding: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+      display: none;
+    }
+    .history-panel.open {
+      display: block;
+    }
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 12px;
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    /* 캡처모드 스타일 */
+    .capture-back-btn {
+      position: fixed;
+      right: 16px;
+      bottom: calc(18px + env(safe-area-inset-bottom));
+      z-index: 35;
+      width: 50px;
+      height: 50px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(17, 24, 39, 0.9);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    body.capture-mode .search-row,
+    body.capture-mode .search-results,
+    body.capture-mode .mode-banner,
+    body.capture-mode .exclude-bar,
+    body.capture-mode .history-panel,
+    body.capture-mode .right-controls,
+    body.capture-mode .center-crosshair,
+    body.capture-mode .add-point-btn,
+    body.capture-mode .bottom-bar {
+      display: none !important;
+    }
+    body.capture-mode .top-panel {
+      padding: 10px 14px;
+    }
+    body.capture-mode .info-row {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+    body.capture-mode .capture-back-btn {
+      display: flex;
+    }
+
+    /* 노란 핀 라벨 */
+    .pin-label {
+      background: #fef08a;
+      color: #111827;
+      border: 2px solid #ca8a04;
+      border-radius: 8px;
+      padding: 3px 7px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="map"></div>
+    <div class="center-crosshair"></div>
+
+    <!-- 상단 패널 -->
+    <div class="top-panel">
+      <div class="search-row">
+        <input id="searchInput" class="search-input" type="text" placeholder="주소 또는 지번 검색" />
+        <button id="searchBtn" class="btn-sm" type="button">검색</button>
+        <button id="toggleExcludeBtn" class="btn-sm secondary" type="button">제외</button>
+        <button id="historyBtn" class="btn-sm secondary" type="button">기록</button>
+      </div>
+
+      <div id="searchResults" class="search-results"></div>
+
+      <div id="modeBanner" class="mode-banner">
+        <span id="modeText">외곽 경계 찍기 (지도 탭 또는 중앙 버튼)</span>
+        <span id="pointCountText">외곽점 0개</span>
+      </div>
+
+      <div id="excludeBar" class="exclude-bar">
+        <button id="newExcludeBtn" class="btn-sm" type="button">+ 새 제외구역</button>
+        <select id="excludeSelect" class="exclude-select">
+          <option value="">제외구역 선택</option>
+        </select>
+        <button id="deleteExcludeBtn" class="btn-sm secondary" type="button">삭제</button>
+      </div>
+
+      <div class="info-row">
+        <div style="min-width:0;">
+          <div id="parcelTitle" class="parcel-title">지도 터치 시 지번 및 점 표시</div>
+          <div id="parcelSub" class="parcel-sub" style="display:none;"></div>
+        </div>
+        <div class="area-box">
+          <div id="areaMain" class="area-main">0.0 ㎡ (0.0 평)</div>
+          <div id="areaDetail" class="area-detail">제외 0.0 ㎡ 반영</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 우측 지도 컨트롤 -->
+    <div class="right-controls">
+      <button id="satelliteBtn" class="map-btn active" type="button">위성</button>
+      <button id="cadastralBtn" class="map-btn" type="button">지적</button>
+      <button id="zoomInBtn" class="map-btn" type="button">+</button>
+      <button id="zoomOutBtn" class="map-btn" type="button">-</button>
+    </div>
+
+    <!-- 중앙 점 찍기 버튼 -->
+    <button id="addPointBtn" class="add-point-btn" type="button">+ 중앙에 점 찍기</button>
+
+    <!-- 최근 기록 패널 -->
+    <div id="historyPanel" class="history-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <strong style="font-size:13px;">최근 측정 기록 (최대 10건)</strong>
+        <button id="closeHistoryBtn" class="btn-sm secondary" type="button" style="height:26px;padding:0 8px;">닫기</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+
+    <!-- 하단 4버튼 -->
+    <div class="bottom-bar">
+      <button id="gpsBtn" class="bottom-btn btn-gps" type="button" aria-label="내 위치">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="7"></circle>
+          <circle cx="12" cy="12" r="2.2" fill="currentColor"></circle>
+          <line x1="12" y1="2" x2="12" y2="5"></line>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+          <line x1="2" y1="12" x2="5" y2="12"></line>
+          <line x1="19" y1="12" x2="22" y2="12"></line>
+        </svg>
+      </button>
+      <button id="undoBtn" class="bottom-btn btn-undo" type="button" aria-label="이전점 취소">↩</button>
+      <button id="resetBtn" class="bottom-btn btn-reset" type="button">초기화</button>
+      <button id="captureBtn" class="bottom-btn btn-capture" type="button" aria-label="캡처모드">⛶</button>
+    </div>
+
+    <!-- 캡처모드 복귀 버튼 -->
+    <button id="captureBackBtn" class="capture-back-btn" type="button" aria-label="편집 복귀">←</button>
+  </div>
+
+  <script>
+    const STORAGE_CURRENT_KEY = "farea_current_v1";
+    const STORAGE_HISTORY_KEY = "farea_history_v1";
+    const MAX_HISTORY = 10;
+
+    let map, geocoder, places;
+    let isSatellite = true;
+    let isCadastral = false;
+    let isCaptureMode = false;
+    let isDraggingMap = false;
+    let watchId = null;
+
+    // 측정 상태
+    let outerPoints = [];        // [{ lat, lng }]
+    let excludePolygons = [];    // [{ id, name, points: [{ lat, lng }] }]
+    let activeMode = "outer";    // "outer" | "exclude"
+    let activeExcludeId = null;
+    let parcelLabel = "";        // 지번 또는 필지명(있을 때만 캡처 상단 카드에 표시)
+    let yellowPin = null;        // 검색 기준 핀 { lat, lng, label, marker, overlay, showLabel }
+    let gpsMarker = null;        // 실시간 내 위치 노란 점
+
+    // 지도 오버레이 참조
+    let outerPolygon = null;
+    let outerPolyline = null;
+    let outerMarkers = [];
+    let midPointMarkers = [];
+    let excludeMapObjs = [];     // { id, polygon, polyline, markers, midMarkers }
+
+    function initMap() {
+      const container = document.getElementById("map");
+      map = new kakao.maps.Map(container, {
+        center: new kakao.maps.LatLng(33.2541, 126.5601),
+        level: 3
+      });
+      geocoder = new kakao.maps.services.Geocoder();
+      places = new kakao.maps.services.Places();
+
+      setMapType();
+
+      // 지도 드래그 직후 오인 클릭 방지
+      kakao.maps.event.addListener(map, "dragstart", function () {
+        isDraggingMap = true;
+      });
+
+      kakao.maps.event.addListener(map, "dragend", function () {
+        setTimeout(() => {
+          isDraggingMap = false;
+        }, 200);
+      });
+
+      // 지도 탭 시 지번 조회 + 바로 그 위치에 점 찍기 (열린 팝업 닫기 우선)
+      kakao.maps.event.addListener(map, "click", function (mouseEvent) {
+        if (isCaptureMode || isDraggingMap) return;
+
+        const searchList = document.getElementById("searchResults");
+        const historyPanel = document.getElementById("historyPanel");
+        if (searchList.classList.contains("open") || historyPanel.classList.contains("open")) {
+          searchList.classList.remove("open");
+          historyPanel.classList.remove("open");
+          return;
+        }
+
+        const latlng = mouseEvent.latLng;
+        addPointAt(latlng.getLat(), latlng.getLng());
+      });
+
+      loadSavedState();
+      renderAll();
+      startWatchPosition();
+
+      setTimeout(() => {
+        if (map && typeof map.relayout === "function") {
+          map.relayout();
+        }
+      }, 150);
+    }
+
+    function setMapType() {
+      map.setMapTypeId(
+        isSatellite ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP
+      );
+      if (isCadastral) {
+        map.addOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
+      } else {
+        map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
+      }
+      document.getElementById("satelliteBtn").classList.toggle("active", isSatellite);
+      document.getElementById("cadastralBtn").classList.toggle("active", isCadastral);
+    }
+
+    function lookupAddress(lat, lng, updateParcelTitle) {
+      geocoder.coord2Address(lng, lat, function (result, status) {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const road = result[0].road_address ? result[0].road_address.address_name : "";
+          const jibun = result[0].address ? result[0].address.address_name : "";
+          const text = jibun || road;
+          document.getElementById("parcelTitle").textContent = text || "주소 정보 없음";
+          if (updateParcelTitle && text) {
+            parcelLabel = text;
+            saveCurrentState();
+            renderParcelSub();
+          }
+        }
+      });
+    }
+
+    function renderParcelSub() {
+      const subEl = document.getElementById("parcelSub");
+      if (parcelLabel) {
+        subEl.textContent = `필지: ${parcelLabel}`;
+        subEl.style.display = "block";
+      } else {
+        subEl.textContent = "";
+        subEl.style.display = "none";
+      }
+    }
+
+    // 검색 및 노란 핀(검색 위치 기준점)
+    function searchLocation() {
+      const q = document.getElementById("searchInput").value.trim();
+      const listEl = document.getElementById("searchResults");
+      if (!q) {
+        listEl.classList.remove("open");
+        return;
+      }
+      listEl.innerHTML = "";
+
+      geocoder.addressSearch(q, function (addrRes, addrStatus) {
+        const items = [];
+        if (addrStatus === kakao.maps.services.Status.OK) {
+          addrRes.forEach(r => {
+            items.push({
+              title: r.address_name,
+              sub: r.road_address ? r.road_address.address_name : "지번/주소",
+              lat: parseFloat(r.y),
+              lng: parseFloat(r.x)
+            });
+          });
+        }
+        places.keywordSearch(q, function (kwRes, kwStatus) {
+          if (kwStatus === kakao.maps.services.Status.OK) {
+            kwRes.forEach(r => {
+              items.push({
+                title: r.place_name,
+                sub: r.road_address_name || r.address_name || "장소",
+                lat: parseFloat(r.y),
+                lng: parseFloat(r.x)
+              });
+            });
+          }
+          renderSearchList(items);
+        });
+      });
+    }
+
+    function renderSearchList(items) {
+      const listEl = document.getElementById("searchResults");
+      listEl.innerHTML = "";
+      if (!items.length) {
+        listEl.innerHTML = `<div class="search-item">검색 결과가 없습니다.</div>`;
+        listEl.classList.add("open");
+        return;
+      }
+      items.slice(0, 8).forEach(item => {
+        const div = document.createElement("div");
+        div.className = "search-item";
+        div.innerHTML = `<div>${escapeHtml(item.title)}</div><div class="search-item-sub">${escapeHtml(item.sub)}</div>`;
+        div.addEventListener("click", () => {
+          setYellowPin(item.lat, item.lng, item.title);
+          parcelLabel = item.title;
+          document.getElementById("parcelTitle").textContent = item.title;
+          map.setCenter(new kakao.maps.LatLng(item.lat, item.lng));
+          listEl.classList.remove("open");
+          renderParcelSub();
+          saveCurrentState();
+        });
+        listEl.appendChild(div);
+      });
+      listEl.classList.add("open");
+    }
+
+    function setYellowPin(lat, lng, labelText, showLabel = true) {
+      clearYellowPin();
+      const pos = new kakao.maps.LatLng(lat, lng);
+
+      const svg = encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="42" viewBox="0 0 32 42">
+          <path d="M16 1C8.3 1 2 7.3 2 15c0 10.5 14 26 14 26s14-15.5 14-26C30 7.3 23.7 1 16 1z" fill="#facc15" stroke="#854d0e" stroke-width="2.5"/>
+          <circle cx="16" cy="15" r="5" fill="#ffffff" stroke="#854d0e" stroke-width="2"/>
+        </svg>
+      `);
+      const markerImage = new kakao.maps.MarkerImage(
+        `data:image/svg+xml;charset=UTF-8,${svg}`,
+        new kakao.maps.Size(32, 42),
+        { offset: new kakao.maps.Point(16, 42) }
+      );
+      const marker = new kakao.maps.Marker({
+        position: pos,
+        image: markerImage,
+        zIndex: 10
+      });
+      marker.setMap(map);
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: pos,
+        content: `<div class="pin-label">${escapeHtml(labelText)}</div>`,
+        yAnchor: 2.6,
+        zIndex: 11
+      });
+      if (showLabel) overlay.setMap(map);
+
+      kakao.maps.event.addListener(marker, "click", function () {
+        if (!yellowPin) return;
+        yellowPin.showLabel = !yellowPin.showLabel;
+        yellowPin.overlay.setMap(yellowPin.showLabel ? map : null);
+        saveCurrentState();
+      });
+
+      yellowPin = { lat, lng, label: labelText, marker, overlay, showLabel };
+    }
+
+    function clearYellowPin() {
+      if (!yellowPin) return;
+      if (yellowPin.marker) yellowPin.marker.setMap(null);
+      if (yellowPin.overlay) yellowPin.overlay.setMap(null);
+      yellowPin = null;
+    }
+
+    // 지정 좌표에 점 추가 (지도 탭 / 중앙 버튼 공용)
+    function addPointAt(lat, lng) {
+      const pt = { lat, lng };
+
+      if (activeMode === "exclude") {
+        let target = excludePolygons.find(e => e.id === activeExcludeId);
+        if (!target) {
+          target = createNewExcludePolygon();
+        }
+        target.points.push(pt);
+        activeExcludeId = target.id;
+      } else {
+        outerPoints.push(pt);
+      }
+
+      lookupAddress(pt.lat, pt.lng, !parcelLabel);
+      renderAll();
+      saveCurrentState();
+      pushHistorySnapshot();
+    }
+
+    function addCenterPoint() {
+      const c = map.getCenter();
+      addPointAt(c.getLat(), c.getLng());
+    }
+
+    function insertMidpoint(pointsArr, index) {
+      const a = pointsArr[index];
+      const b = pointsArr[(index + 1) % pointsArr.length];
+      const mid = { lat: (a.lat + b.lat) / 2, lng: (a.lng + b.lng) / 2 };
+      pointsArr.splice(index + 1, 0, mid);
+      renderAll();
+      saveCurrentState();
+    }
+
+    function undoLastPoint() {
+      if (activeMode === "exclude") {
+        const target = excludePolygons.find(e => e.id === activeExcludeId);
+        if (target && target.points.length > 0) {
+          target.points.pop();
+        }
+      } else if (outerPoints.length > 0) {
+        outerPoints.pop();
+      }
+      renderAll();
+      saveCurrentState();
+    }
+
+    // 제외 영역 관리
+    function createNewExcludePolygon() {
+      const id = "ex_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+      const name = `제외구역 ${excludePolygons.length + 1}`;
+      const item = { id, name, points: [] };
+      excludePolygons.push(item);
+      activeExcludeId = id;
+      syncExcludeSelect();
+      return item;
+    }
+
+    function syncExcludeSelect() {
+      const sel = document.getElementById("excludeSelect");
+      sel.innerHTML = `<option value="">제외구역 선택</option>`;
+      excludePolygons.forEach(ex => {
+        const opt = document.createElement("option");
+        opt.value = ex.id;
+        opt.textContent = `${ex.name} (점 ${ex.points.length}개)`;
+        if (ex.id === activeExcludeId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    function deleteSelectedExclude() {
+      if (!activeExcludeId) return;
+      excludePolygons = excludePolygons.filter(e => e.id !== activeExcludeId);
+      activeExcludeId = excludePolygons.length ? excludePolygons[excludePolygons.length - 1].id : null;
+      syncExcludeSelect();
+      renderAll();
+      saveCurrentState();
+    }
+
+    // 면적 계산(구면 좌표 기반 근사 ㎡)
+    function calcPolygonAreaSqMeters(pts) {
+      if (!pts || pts.length < 3) return 0;
+      const R = 6378137;
+      let sum = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const p1 = pts[i];
+        const p2 = pts[(i + 1) % pts.length];
+        const lon1 = (p1.lng * Math.PI) / 180;
+        const lon2 = (p2.lng * Math.PI) / 180;
+        const lat1 = (p1.lat * Math.PI) / 180;
+        const lat2 = (p2.lat * Math.PI) / 180;
+        sum += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+      }
+      return Math.abs((sum * R * R) / 2);
+    }
+
+    function updateAreaDisplay() {
+      const outerArea = calcPolygonAreaSqMeters(outerPoints);
+      const excludeArea = excludePolygons.reduce(
+        (acc, ex) => acc + calcPolygonAreaSqMeters(ex.points),
+        0
+      );
+      const netArea = Math.max(0, outerArea - excludeArea);
+      const pyeong = netArea / 3.305785;
+
+      document.getElementById("areaMain").textContent =
+        `${netArea.toFixed(1)} ㎡ (${pyeong.toFixed(1)} 평)`;
+      document.getElementById("areaDetail").textContent =
+        `외곽 ${outerArea.toFixed(1)} ㎡ · 제외 -${excludeArea.toFixed(1)} ㎡`;
+    }
+
+    // 지도 그리기
+    function clearMapShapes() {
+      if (outerPolygon) outerPolygon.setMap(null);
+      if (outerPolyline) outerPolyline.setMap(null);
+      outerMarkers.forEach(m => m.setMap(null));
+      midPointMarkers.forEach(m => m.setMap(null));
+      outerMarkers = [];
+      midPointMarkers = [];
+
+      excludeMapObjs.forEach(obj => {
+        if (obj.polygon) obj.polygon.setMap(null);
+        if (obj.polyline) obj.polyline.setMap(null);
+        obj.markers.forEach(m => m.setMap(null));
+        obj.midMarkers.forEach(m => m.setMap(null));
+      });
+      excludeMapObjs = [];
+    }
+
+    function createPointMarker(pt, color, onDragEnd) {
+      const svg = encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22">
+          <circle cx="11" cy="11" r="7.5" fill="#ffffff" stroke="${color}" stroke-width="3"/>
+        </svg>
+      `);
+      const img = new kakao.maps.MarkerImage(
+        `data:image/svg+xml;charset=UTF-8,${svg}`,
+        new kakao.maps.Size(22, 22),
+        { offset: new kakao.maps.Point(11, 11) }
+      );
+      const marker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(pt.lat, pt.lng),
+        image: img,
+        draggable: true,
+        zIndex: 6
+      });
+      marker.setMap(map);
+      kakao.maps.event.addListener(marker, "dragend", function () {
+        const pos = marker.getPosition();
+        onDragEnd(pos.getLat(), pos.getLng());
+      });
+      return marker;
+    }
+
+    function createMidMarker(pts, idx, color) {
+      const a = pts[idx];
+      const b = pts[(idx + 1) % pts.length];
+      const midLat = (a.lat + b.lat) / 2;
+      const midLng = (a.lng + b.lng) / 2;
+
+      const svg = encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="8" cy="8" r="5.5" fill="${color}" fill-opacity="0.85" stroke="#ffffff" stroke-width="2"/>
+        </svg>
+      `);
+      const img = new kakao.maps.MarkerImage(
+        `data:image/svg+xml;charset=UTF-8,${svg}`,
+        new kakao.maps.Size(16, 16),
+        { offset: new kakao.maps.Point(8, 8) }
+      );
+      const marker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(midLat, midLng),
+        image: img,
+        zIndex: 5
+      });
+      marker.setMap(map);
+      kakao.maps.event.addListener(marker, "click", function () {
+        insertMidpoint(pts, idx);
+      });
+      return marker;
+    }
+
+    function renderAll() {
+      clearMapShapes();
+
+      // 외곽 다각형
+      if (outerPoints.length >= 2) {
+        const path = outerPoints.map(p => new kakao.maps.LatLng(p.lat, p.lng));
+        if (outerPoints.length >= 3) {
+          outerPolygon = new kakao.maps.Polygon({
+            path,
+            strokeWeight: 3,
+            strokeColor: "#ef4444",
+            strokeOpacity: 0.95,
+            fillColor: "#ef4444",
+            fillOpacity: 0.22
+          });
+          outerPolygon.setMap(map);
+        } else {
+          outerPolyline = new kakao.maps.Polyline({
+            path,
+            strokeWeight: 3,
+            strokeColor: "#ef4444",
+            strokeOpacity: 0.95
+          });
+          outerPolyline.setMap(map);
+        }
+      }
+
+      outerPoints.forEach((pt, i) => {
+        const m = createPointMarker(pt, "#ef4444", (lat, lng) => {
+          outerPoints[i] = { lat, lng };
+          renderAll();
+          saveCurrentState();
+        });
+        outerMarkers.push(m);
+
+        if (outerPoints.length >= 2 && (outerPoints.length >= 3 || i < outerPoints.length - 1)) {
+          midPointMarkers.push(createMidMarker(outerPoints, i, "#ef4444"));
+        }
+      });
+
+      // 제외 영역 다각형들
+      excludePolygons.forEach(ex => {
+        const obj = { id: ex.id, polygon: null, polyline: null, markers: [], midMarkers: [] };
+        if (ex.points.length >= 2) {
+          const path = ex.points.map(p => new kakao.maps.LatLng(p.lat, p.lng));
+          if (ex.points.length >= 3) {
+            obj.polygon = new kakao.maps.Polygon({
+              path,
+              strokeWeight: 2.5,
+              strokeColor: "#f59e0b",
+              strokeOpacity: 0.95,
+              fillColor: "#f59e0b",
+              fillOpacity: 0.35
+            });
+            obj.polygon.setMap(map);
+          } else {
+            obj.polyline = new kakao.maps.Polyline({
+              path,
+              strokeWeight: 2.5,
+              strokeColor: "#f59e0b",
+              strokeOpacity: 0.95
+            });
+            obj.polyline.setMap(map);
+          }
+        }
+        ex.points.forEach((pt, idx) => {
+          const mk = createPointMarker(pt, "#d97706", (lat, lng) => {
+            ex.points[idx] = { lat, lng };
+            renderAll();
+            saveCurrentState();
+          });
+          obj.markers.push(mk);
+
+          if (ex.points.length >= 2 && (ex.points.length >= 3 || idx < ex.points.length - 1)) {
+            obj.midMarkers.push(createMidMarker(ex.points, idx, "#d97706"));
+          }
+        });
+        excludeMapObjs.push(obj);
+      });
+
+      // 모드 표시
+      const banner = document.getElementById("modeBanner");
+      const modeText = document.getElementById("modeText");
+      const countText = document.getElementById("pointCountText");
+      if (activeMode === "exclude") {
+        banner.classList.add("exclude");
+        const curEx = excludePolygons.find(e => e.id === activeExcludeId);
+        modeText.textContent = `제외 영역 찍기 (${curEx ? curEx.name : "새 구역"})`;
+        countText.textContent = `제외점 ${curEx ? curEx.points.length : 0}개`;
+      } else {
+        banner.classList.remove("exclude");
+        modeText.textContent = "외곽 경계 찍기 (지도 탭 또는 중앙 버튼)";
+        countText.textContent = `외곽점 ${outerPoints.length}개`;
+      }
+
+      syncExcludeSelect();
+      renderParcelSub();
+      updateAreaDisplay();
+    }
+
+    // 캡처모드 (시야 자동 이동 억제 및 GPS 마커 숨김)
+    function enterCaptureMode() {
+      isCaptureMode = true;
+      if (gpsMarker) gpsMarker.setMap(null);
+      document.body.classList.add("capture-mode");
+    }
+
+    function exitCaptureMode() {
+      isCaptureMode = false;
+      if (gpsMarker) gpsMarker.setMap(map);
+      document.body.classList.remove("capture-mode");
+      renderAll();
+    }
+
+    // 실시간 위치: 지도 중심은 고정하고 노란 점(내 위치)만 실시간 이동
+    function updateGpsDot(lat, lng) {
+      const pos = new kakao.maps.LatLng(lat, lng);
+
+      if (!gpsMarker) {
+        const svg = encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" fill="#facc15" fill-opacity="0.35"/>
+            <circle cx="12" cy="12" r="5.5" fill="#facc15" stroke="#111827" stroke-width="2.2"/>
+          </svg>
+        `);
+        const img = new kakao.maps.MarkerImage(
+          `data:image/svg+xml;charset=UTF-8,${svg}`,
+          new kakao.maps.Size(24, 24),
+          { offset: new kakao.maps.Point(12, 12) }
+        );
+        gpsMarker = new kakao.maps.Marker({
+          position: pos,
+          image: img,
+          zIndex: 12
+        });
+        if (!isCaptureMode) gpsMarker.setMap(map);
+      } else {
+        gpsMarker.setPosition(pos);
+      }
+    }
+
+    function startWatchPosition() {
+      if (!navigator.geolocation) return;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+
+      watchId = navigator.geolocation.watchPosition(
+        function (pos) {
+          updateGpsDot(pos.coords.latitude, pos.coords.longitude);
+        },
+        function () {},
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+      );
+    }
+
+    // 하단 GPS 버튼을 직접 눌렀을 때만 지도 중심을 내 위치로 이동
+    function moveToCurrentLocation() {
+      if (!navigator.geolocation || isCaptureMode) return;
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          updateGpsDot(lat, lng);
+          map.setCenter(new kakao.maps.LatLng(lat, lng));
+          lookupAddress(lat, lng, false);
+        },
+        function () {
+          alert("현재 위치를 가져올 수 없습니다.");
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // 초기화
+    function resetAll() {
+      outerPoints = [];
+      excludePolygons = [];
+      activeExcludeId = null;
+      activeMode = "outer";
+      parcelLabel = "";
+      document.getElementById("toggleExcludeBtn").classList.remove("active-mode");
+      document.getElementById("excludeBar").classList.remove("show");
+      document.getElementById("parcelTitle").textContent = "지도 터치 시 지번 및 점 표시";
+      clearYellowPin();
+      localStorage.removeItem(STORAGE_CURRENT_KEY);
+      renderAll();
+    }
+
+    // localStorage 자동 저장 & 최근 히스토리(최대 10건)
+    function serializeState() {
+      return {
+        outerPoints,
+        excludePolygons,
+        activeExcludeId,
+        parcelLabel,
+        parcelTitleText: document.getElementById("parcelTitle").textContent,
+        yellowPin: yellowPin
+          ? { lat: yellowPin.lat, lng: yellowPin.lng, label: yellowPin.label, showLabel: yellowPin.showLabel }
+          : null,
+        savedAt: new Date().toISOString()
+      };
+    }
+
+    function saveCurrentState() {
+      try {
+        localStorage.setItem(STORAGE_CURRENT_KEY, JSON.stringify(serializeState()));
+      } catch (e) {}
+    }
+
+    function pushHistorySnapshot() {
+      if (outerPoints.length < 1 && excludePolygons.length < 1) return;
+      try {
+        const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        const snap = serializeState();
+        snap.areaSqM = calcPolygonAreaSqMeters(outerPoints) -
+          excludePolygons.reduce((a, e) => a + calcPolygonAreaSqMeters(e.points), 0);
+        snap.areaSqM = Math.max(0, snap.areaSqM);
+        list.unshift(snap);
+        localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(list.slice(0, MAX_HISTORY)));
+      } catch (e) {}
+    }
+
+    function loadSavedState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_CURRENT_KEY);
+        if (!raw) return;
+        applyState(JSON.parse(raw), true);
+      } catch (e) {}
+    }
+
+    function applyState(st, moveCenter) {
+      outerPoints = Array.isArray(st.outerPoints) ? st.outerPoints : [];
+      excludePolygons = Array.isArray(st.excludePolygons) ? st.excludePolygons : [];
+      activeExcludeId = st.activeExcludeId || (excludePolygons[0] ? excludePolygons[0].id : null);
+      parcelLabel = st.parcelLabel || "";
+      if (st.parcelTitleText) {
+        document.getElementById("parcelTitle").textContent = st.parcelTitleText;
+      }
+      if (st.yellowPin) {
+        setYellowPin(st.yellowPin.lat, st.yellowPin.lng, st.yellowPin.label, st.yellowPin.showLabel !== false);
+      } else {
+        clearYellowPin();
+      }
+      if (moveCenter && outerPoints.length > 0) {
+        map.setCenter(new kakao.maps.LatLng(outerPoints[0].lat, outerPoints[0].lng));
+      }
+    }
+
+    function renderHistoryList() {
+      const wrap = document.getElementById("historyList");
+      wrap.innerHTML = "";
+      let list = [];
+      try {
+        const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+        list = raw ? JSON.parse(raw) : [];
+      } catch (e) {}
+
+      if (!list.length) {
+        wrap.innerHTML = `<div style="font-size:12px;color:#6b7280;padding:8px 0;">저장된 최근 기록이 없습니다.</div>`;
+        return;
+      }
+
+      list.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "history-item";
+        const label = item.parcelLabel || item.parcelTitleText || "측정 필지";
+        const areaText = `${Number(item.areaSqM || 0).toFixed(1)} ㎡`;
+        row.innerHTML = `
+          <div style="min-width:0;">
+            <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(label)}</div>
+            <div style="color:#4b5563;">${areaText} · 외곽점 ${(item.outerPoints || []).length}개</div>
+          </div>
+          <button class="btn-sm" type="button" style="height:28px;padding:0 9px;">불러오기</button>
+        `;
+        row.querySelector("button").addEventListener("click", () => {
+          applyState(item, true);
+          renderAll();
+          saveCurrentState();
+          document.getElementById("historyPanel").classList.remove("open");
+        });
+        wrap.appendChild(row);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, """);
+    }
+
+    // 이벤트 연결
+    document.getElementById("searchBtn").addEventListener("click", searchLocation);
+    document.getElementById("searchInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") searchLocation();
+    });
+
+    document.getElementById("toggleExcludeBtn").addEventListener("click", function () {
+      const bar = document.getElementById("excludeBar");
+      if (activeMode === "exclude") {
+        activeMode = "outer";
+        this.classList.remove("active-mode");
+        bar.classList.remove("show");
+      } else {
+        activeMode = "exclude";
+        this.classList.add("active-mode");
+        bar.classList.add("show");
+        if (!activeExcludeId && excludePolygons.length) {
+          activeExcludeId = excludePolygons[0].id;
+        }
+      }
+      renderAll();
+    });
+
+    document.getElementById("newExcludeBtn").addEventListener("click", function () {
+      activeMode = "exclude";
+      document.getElementById("toggleExcludeBtn").classList.add("active-mode");
+      document.getElementById("excludeBar").classList.add("show");
+      createNewExcludePolygon();
+      renderAll();
+      saveCurrentState();
+    });
+
+    document.getElementById("excludeSelect").addEventListener("change", function () {
+      activeExcludeId = this.value || null;
+      renderAll();
+      saveCurrentState();
+    });
+
+    document.getElementById("deleteExcludeBtn").addEventListener("click", deleteSelectedExclude);
+
+    document.getElementById("historyBtn").addEventListener("click", function () {
+      const panel = document.getElementById("historyPanel");
+      const next = !panel.classList.contains("open");
+      if (next) renderHistoryList();
+      panel.classList.toggle("open", next);
+    });
+    document.getElementById("closeHistoryBtn").addEventListener("click", function () {
+      document.getElementById("historyPanel").classList.remove("open");
+    });
+
+    document.getElementById("satelliteBtn").addEventListener("click", function () {
+      isSatellite = !isSatellite;
+      setMapType();
+    });
+    document.getElementById("cadastralBtn").addEventListener("click", function () {
+      isCadastral = !isCadastral;
+      setMapType();
+    });
+    document.getElementById("zoomInBtn").addEventListener("click", function () {
+      map.setLevel(map.getLevel() - 1);
+    });
+    document.getElementById("zoomOutBtn").addEventListener("click", function () {
+      map.setLevel(map.getLevel() + 1);
+    });
+
+    document.getElementById("addPointBtn").addEventListener("click", addCenterPoint);
+    document.getElementById("gpsBtn").addEventListener("click", moveToCurrentLocation);
+    document.getElementById("undoBtn").addEventListener("click", undoLastPoint);
+    document.getElementById("resetBtn").addEventListener("click", resetAll);
+    document.getElementById("captureBtn").addEventListener("click", enterCaptureMode);
+    document.getElementById("captureBackBtn").addEventListener("click", exitCaptureMode);
+
+    window.addEventListener("DOMContentLoaded", function () {
+      if (window.kakao && window.kakao.maps && typeof window.kakao.maps.load === "function") {
+        window.kakao.maps.load(initMap);
+      } else {
+        initMap();
+      }
+    });
+  </script>
+</body>
+</html>
