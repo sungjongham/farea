@@ -125,7 +125,6 @@
       position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 10;
       display: flex; flex-direction: column; gap: 6px;
     }
-
     .bottom-bar {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
     }
@@ -342,7 +341,6 @@
     moveToMyLocation(true);
     startWatchMyLocation();
 
-    // 점 드래그 이동용 전역 포인터 이벤트
     window.addEventListener('pointermove', handlePointDragMove, { passive: false });
     window.addEventListener('pointerup', handlePointDragEnd);
     window.addEventListener('pointercancel', handlePointDragEnd);
@@ -546,4 +544,32 @@
     }
     navigator.geolocation.getCurrentPosition(
       pos => {
-        const loc = new kakao.maps.
+        const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+        showYellowDot(loc);
+        map.setCenter(loc);
+        map.setLevel(1);
+      },
+      () => {
+        if (!silent) alert('위치 권한을 허용해 주세요.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  function searchAddress() {
+    const query = document.getElementById('searchInput').value.trim();
+    if (!query) return;
+    geocoder.addressSearch(query, function (result, status) {
+      if (status === kakao.maps.services.Status.OK) {
+        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+        map.setCenter(coords);
+        map.setLevel(1);
+        document.getElementById('searchBar').classList.remove('open');
+      } else {
+        alert('주소를 찾을 수 없습니다. 지번이나 도로명을 정확히 입력해 주세요.');
+      }
+    });
+  }
+</script>
+</body>
+</html>
