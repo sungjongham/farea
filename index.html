@@ -130,7 +130,7 @@
       color: #0284c7; font-size: 14px; font-weight: 900; margin-left: 4px;
     }
 
-    /* 우측 패널 */
+    /* 우측 패널: 박스 배경·테두리·그림자 통일 */
     .right-panel {
       position: absolute; top: calc(152px + env(safe-area-inset-top)); right: 8px; z-index: 12;
       display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
@@ -140,17 +140,17 @@
     }
     .layer-btn {
       padding: 7px 10px;
-      border: 1.5px solid #334155;
-      border-radius: 11px;
-      background: rgba(24, 28, 34, 0.92);
-      color: #f8fafc; font-size: 11px; font-weight: 800;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      border: 1.5px solid #475569;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.94);
+      color: #ffffff; font-size: 11px; font-weight: 800;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42);
       backdrop-filter: blur(10px);
     }
     .layer-btn.active {
       background: #0284c7;
       color: #ffffff;
-      border-color: #38bdf8;
+      border-color: #7dd3fc;
     }
 
     .zoom-controls {
@@ -158,35 +158,37 @@
     }
     .zoom-btn {
       width: 40px; height: 40px;
-      border: 1.5px solid #334155;
+      border: 1.5px solid #475569;
       border-radius: 12px;
-      background: rgba(24, 28, 34, 0.92);
+      background: rgba(15, 23, 42, 0.94);
       color: #ffffff;
       font-size: 21px; font-weight: 800; line-height: 1;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42);
       backdrop-filter: blur(10px);
       display: flex; align-items: center; justify-content: center;
     }
     .zoom-btn:active { background: #334155; transform: scale(0.96); }
     .zoom-badge {
+      width: 40px;
       font-size: 10px; font-weight: 900; color: #bef264;
-      background: rgba(15, 23, 42, 0.94);
-      border: 1px solid rgba(163, 230, 53, 0.45);
-      border-radius: 7px;
-      padding: 2px 7px; text-align: center;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid #475569;
+      border-radius: 8px;
+      padding: 3px 0; text-align: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.36);
     }
 
-    /* 확대/축소 밑: 수동찍기(빨간 압정 핀) / 도보(발자국 한 쌍) */
+    /* 확대/축소 밑: 수동찍기(빨간 압정 핀) / 도보(발자국 한 쌍) — 동일 박스 규격 통일 */
     .side-mode-controls {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
     }
     .side-mode-btn {
       width: 40px; min-height: 46px; padding: 4px 2px;
-      border: 1.5px solid #334155;
+      border: 1.5px solid #475569;
       border-radius: 12px;
-      background: rgba(24, 28, 34, 0.92);
-      color: #e2e8f0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+      background: rgba(15, 23, 42, 0.94);
+      color: #f8fafc;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.42);
       backdrop-filter: blur(10px);
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
       font-size: 9px; font-weight: 900; line-height: 1.05;
@@ -196,12 +198,12 @@
       width: 20px; height: 20px; flex-shrink: 0;
     }
     .side-mode-btn.active-manual {
-      background: rgba(24, 28, 34, 0.96);
+      background: rgba(15, 23, 42, 0.96);
       border-color: #ff1e42;
-      color: #ff6b81;
+      color: #ff8095;
     }
     .side-mode-btn.active-walk {
-      background: rgba(22, 101, 52, 0.94);
+      background: rgba(20, 83, 45, 0.96);
       border-color: #a3e635;
       color: #ecfccb;
     }
@@ -228,25 +230,25 @@
       stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round;
     }
     .btn-gps {
-      background: rgba(20, 83, 45, 0.90);
+      background: rgba(20, 83, 45, 0.92);
       border: 1.5px solid #a3e635;
-      color: #d9f99d;
+      color: #ecfccb;
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
     }
     .btn-undo {
-      background: rgba(30, 41, 59, 0.90);
+      background: rgba(30, 41, 59, 0.92);
       border: 1.5px solid #94a3b8;
       color: #f8fafc;
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
     }
     .btn-clear {
-      background: rgba(136, 19, 55, 0.90);
+      background: rgba(136, 19, 55, 0.92);
       border: 1.5px solid #fb7185;
       color: #ffe4e6;
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
     }
     .btn-capture {
-      background: rgba(12, 74, 110, 0.90);
+      background: rgba(12, 74, 110, 0.92);
       border: 1.5px solid #38bdf8;
       color: #e0f2fe;
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.38);
@@ -364,9 +366,9 @@
     <button type="button" class="side-mode-btn active-manual" id="btnModeManual" onclick="setMeasureMode('manual')" title="수동 찍기" aria-label="수동 찍기">
       <!-- 빨간 압정 핀(📌) SVG -->
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 14.5V22" stroke="#e2e8f0" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M12 14.5V22" stroke="#f8fafc" stroke-width="2.2" stroke-linecap="round"/>
         <ellipse cx="12" cy="8.5" rx="6.3" ry="6.3" fill="#ff1e42"/>
-        <ellipse cx="10.2" cy="6.6" rx="2" ry="1.3" transform="rotate(-25 10.2 6.6)" fill="rgba(255,255,255,0.55)"/>
+        <ellipse cx="10.2" cy="6.6" rx="2" ry="1.3" transform="rotate(-25 10.2 6.6)" fill="rgba(255,255,255,0.6)"/>
       </svg>
       <span>수동</span>
     </button>
