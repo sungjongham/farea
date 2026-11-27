@@ -178,24 +178,23 @@
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
     }
 
-    /* 확대/축소 밑: 수동찍기(빨간 압정 핀) / 도보(발자국 한 쌍) — 밝은 박스 위 고대비 */
+    /* 확대/축소 밑: 빨간 압정 핀 / 발자국 한 쌍 (아이콘만 단순 배치) */
     .side-mode-controls {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
     }
     .side-mode-btn {
-      width: 40px; min-height: 46px; padding: 4px 2px;
+      width: 40px; height: 40px;
       border: 1.5px solid #cbd5e1;
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.96);
       color: #1e293b;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
       backdrop-filter: blur(10px);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-      font-size: 9px; font-weight: 900; line-height: 1.05;
+      display: flex; align-items: center; justify-content: center;
     }
     .side-mode-btn:active { transform: scale(0.96); }
     .side-mode-btn svg {
-      width: 20px; height: 20px; flex-shrink: 0;
+      width: 22px; height: 22px; flex-shrink: 0;
     }
     .side-mode-btn.active-manual {
       background: #fff1f2;
@@ -361,20 +360,19 @@
     <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
   </div>
 
-  <!-- 확대/축소 바로 밑: 수동찍기(빨간 압정 핀) / 도보(발자국 한 쌍) -->
+  <!-- 확대/축소 바로 밑: 빨간 압정 핀 / 발자국 한 쌍 -->
   <div class="side-mode-controls" role="group" aria-label="측정 모드">
     <button type="button" class="side-mode-btn active-manual" id="btnModeManual" onclick="setMeasureMode('manual')" title="수동 찍기" aria-label="수동 찍기">
-      <!-- 빨간 압정 핀(📌) SVG -->
+      <!-- 빨간 압정 핀 SVG -->
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M12 14.5V22" stroke="#475569" stroke-width="2.2" stroke-linecap="round"/>
         <ellipse cx="12" cy="8.5" rx="6.3" ry="6.3" fill="#ff1e42"/>
         <ellipse cx="10.2" cy="6.6" rx="2" ry="1.3" transform="rotate(-25 10.2 6.6)" fill="rgba(255,255,255,0.65)"/>
       </svg>
-      <span>수동</span>
     </button>
 
     <button type="button" class="side-mode-btn" id="btnModeWalk" onclick="setMeasureMode('walk')" title="도보 자동 (3m 간격)" aria-label="도보 자동 (3m 간격)">
-      <!-- 발자국 한 쌍(👣) SVG -->
+      <!-- 발자국 한 쌍 SVG -->
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <ellipse cx="7.5" cy="11.2" rx="2.7" ry="4.1" transform="rotate(-12 7.5 11.2)"/>
         <ellipse cx="7.6" cy="18.2" rx="2.1" ry="2.2" transform="rotate(-8 7.6 18.2)"/>
@@ -387,7 +385,6 @@
         <circle cx="16.7" cy="2.9" r="1.05"/>
         <circle cx="18.8" cy="3.6" r="1.05"/>
       </svg>
-      <span>도보</span>
     </button>
   </div>
 </div>
