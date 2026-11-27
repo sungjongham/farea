@@ -2,850 +2,162 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0b57d0" />
-  <link rel="manifest" href="./manifest.json" />
-  <title>농지 주소·면적 측정기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1e88e5" />
+  <title>농지 면적 측정</title>
   <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=25bd6279b09da3619d1cfc1619d628f2&libraries=services"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body, html {
-      width: 100%; height: 100%; height: 100dvh;
-      font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
-      overflow: hidden; overscroll-behavior: none; touch-action: none;
-      background: #111;
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
-    #map { width: 100%; height: 100%; height: 100dvh; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", sans-serif;
+      background: #eef2f5;
+    }
+    #map {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
 
-    /* 화면 중앙 고정 십자선 */
-    .center-crosshair {
+    /* 상단 영역 */
+    .top-wrap {
       position: fixed;
-      top: 50%; left: 50%;
-      width: 28px; height: 28px;
-      transform: translate(-50%, -50%);
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       pointer-events: none;
-      z-index: 9;
     }
-    .center-crosshair::before,
-    .center-crosshair::after {
-      content: "";
-      position: absolute;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
-    }
-    .center-crosshair::before {
-      top: 50%; left: 0; right: 0; height: 2px;
-      transform: translateY(-50%);
-    }
-    .center-crosshair::after {
-      left: 50%; top: 0; bottom: 0; width: 2px;
-      transform: translateX(-50%);
+    .top-wrap > * {
+      pointer-events: auto;
     }
 
-    /* 상단 창: 주소 + 면적(㎡, 평) + 둘레(m) 표시 */
-    .top-panel {
-      position: absolute; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; z-index: 10;
-      background: #ffffff; border: 2px solid #111111; border-radius: 10px;
-      padding: 8px 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+    .search-box {
+      display: flex;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.96);
+      padding: 6px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
     }
-    .addr-row {
-      display: flex; justify-content: space-between; align-items: center; gap: 6px;
-      background: #f1f5f9; padding: 5px 8px; border-radius: 6px; margin-bottom: 6px;
+    .search-box input {
+      flex: 1;
+      min-width: 0;
+      height: 38px;
+      border: 1px solid #d5dce2;
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 14px;
+      outline: none;
     }
-    .addr-text {
-      font-size: 13px; font-weight: 800; color: #0f172a;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+    .search-box input:focus {
+      border-color: #1e88e5;
     }
-    .addr-actions { display: flex; gap: 4px; flex-shrink: 0; }
-    .mini-btn {
-      padding: 4px 8px; font-size: 11px; font-weight: 800; border: 1px solid #334155;
-      background: #ffffff; border-radius: 5px; color: #0f172a;
-    }
-
-    .search-wrap { display: none; flex-direction: column; gap: 5px; margin-bottom: 6px; }
-    .search-wrap.open { display: flex; }
-    .search-bar { display: flex; gap: 5px; }
-    .search-bar input {
-      flex: 1; padding: 6px 8px; border: 1.5px solid #334155; border-radius: 6px; font-size: 13px; color: #111;
-    }
-    .search-bar button {
-      padding: 6px 12px; border: none; border-radius: 6px; background: #111111; color: #ffffff; font-weight: 800; font-size: 12px;
-    }
-
-    .search-history {
-      display: none; flex-wrap: wrap; gap: 4px;
-      max-height: 86px; overflow-y: auto; padding: 2px 0;
-      touch-action: pan-y;
-    }
-    .search-history.has-items { display: flex; }
-    .history-chip {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 999px;
-      padding: 3px 8px; font-size: 11px; font-weight: 700; color: #0f172a;
-      max-width: 100%;
-    }
-    .history-query {
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;
+    .search-box button {
+      height: 38px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 8px;
+      background: #1e88e5;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
       cursor: pointer;
-    }
-    .history-del {
-      border: none; background: transparent; color: #64748b;
-      font-size: 12px; font-weight: 900; line-height: 1; padding: 0 2px; cursor: pointer;
-    }
-
-    .area-display {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 6px;
-      padding: 3px 2px 1px;
-    }
-    .area-title {
-      font-size: 15px; font-weight: 900; color: #111111; flex-shrink: 0;
-    }
-    .area-values {
-      font-size: 16px; font-weight: 900; color: #d50000; text-align: right; letter-spacing: -0.4px;
       white-space: nowrap;
     }
-    .area-pyeong {
-      color: #0f172a; font-size: 15px; font-weight: 900;
-    }
-    .perimeter-inline {
-      color: #0b57d0; font-size: 14px; font-weight: 900; margin-left: 4px;
+    .search-box button:active {
+      background: #1565c0;
     }
 
-    /* 우측 패널: 상단 면적 숫자를 가리지 않도록 아래로 띄움 */
-    .right-panel {
-      position: absolute; top: calc(152px + env(safe-area-inset-top)); right: 8px; z-index: 12;
-      display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-    }
-    .layer-controls {
-      display: flex; flex-direction: column; gap: 5px;
-    }
-    .layer-btn {
-      padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 7px;
-      background: #ffffff; color: #111111; font-size: 11px; font-weight: 800;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    }
-    .layer-btn.active { background: #0b57d0; color: #ffffff; border-color: #0b57d0; }
-
-    .zoom-controls {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-    }
-    .zoom-btn {
-      width: 40px; height: 40px; border: 1.5px solid #111111; border-radius: 9px;
-      background: #ffffff; color: #111111;
-      font-size: 22px; font-weight: 900; line-height: 1;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .zoom-btn:active { background: #e2e8f0; }
-    .zoom-badge {
-      font-size: 10px; font-weight: 800; color: #ffffff;
-      background: #111111; border-radius: 5px;
-      padding: 2px 6px; text-align: center;
-    }
-
-    /* 하단 영역: 4개 아이콘 버튼 */
-    .bottom-wrap {
-      position: absolute; bottom: calc(10px + env(safe-area-inset-bottom)); left: 8px; right: 8px; z-index: 10;
-      display: flex; flex-direction: column; gap: 6px;
-    }
-    .bottom-bar {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
-    }
-    .action-btn {
-      height: 46px; border: none; border-radius: 10px;
-      color: #ffffff;
-      box-shadow: 0 2px 7px rgba(0,0,0,0.28);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .action-btn:active { transform: scale(0.97); }
-    .action-btn svg {
-      width: 21px; height: 21px;
-      stroke: currentColor; fill: none;
-      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
-    }
-    .btn-gps { background: #2e7d32; }
-    .btn-undo { background: #475569; }
-    .btn-clear { background: #c62828; }
-    .btn-capture { background: #0b57d0; }
-
-    /* 캡처모드: 모든 편집/제어 메뉴 및 중앙 십자선 숨김 */
-    body.capture-mode .addr-actions,
-    body.capture-mode .search-wrap,
-    body.capture-mode .right-panel,
-    body.capture-mode .bottom-wrap,
-    body.capture-mode .center-crosshair {
-      display: none !important;
-    }
-    body.capture-mode .addr-row {
-      margin-bottom: 4px;
-    }
-
-    /* 캡처모드에서 편집 메뉴로 돌아오는 되돌리기 아이콘 버튼 */
-    .exit-capture-btn {
+    /* 검색 이력 칩 */
+    .history-bar {
       display: none;
-      position: fixed; bottom: calc(14px + env(safe-area-inset-bottom)); right: 12px; z-index: 25;
-      width: 44px; height: 44px; border: 1.5px solid #111111; border-radius: 50%;
-      background: rgba(255, 255, 255, 0.95); color: #111111;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
-      align-items: center; justify-content: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 6px;
+      padding-bottom: 2px;
+      scrollbar-width: none;
     }
-    .exit-capture-btn:active { transform: scale(0.96); }
-    .exit-capture-btn svg {
-      width: 20px; height: 20px;
-      stroke: currentColor; fill: none;
-      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+    .history-bar::-webkit-scrollbar {
+      display: none;
     }
-    body.capture-mode .exit-capture-btn {
+    .history-bar.show {
       display: flex;
     }
-
-    /* 포인트 점: 시각 크기는 7px 유지하되 손가락 드래그가 쉽도록 터치 영역 확보 */
-    .pt-dot-hit {
-      width: 24px; height: 24px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: grab; touch-action: none;
+    .history-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #cfd8dc;
+      border-radius: 999px;
+      padding: 4px 8px 4px 10px;
+      font-size: 12px;
+      color: #263238;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .pt-dot-hit:active { cursor: grabbing; }
-    .pt-dot-total {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: #ff1744; border: 1.5px solid #ffffff;
-      box-shadow: 0 0 3px rgba(0,0,0,0.85);
-      pointer-events: none;
+    .history-chip-text {
+      cursor: pointer;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-
-    .yellow-dot-wrap {
-      position: relative; width: 24px; height: 24px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .yellow-dot-pulse {
-      position: absolute; width: 24px; height: 24px; border-radius: 50%;
-      background: rgba(255, 214, 0, 0.35);
-    }
-    .yellow-dot-core {
-      position: relative; width: 13px; height: 13px; border-radius: 50%;
-      background: #ffd600; border: 2px solid #ffffff;
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
-    }
-  </style>
-</head>
-<body>
-
-<div id="map"></div>
-<div class="center-crosshair" aria-hidden="true"></div>
-
-<div class="top-panel">
-  <div class="addr-row">
-    <div class="addr-text" id="addressText">지도 터치 시 지번 표시</div>
-    <div class="addr-actions">
-      <button class="mini-btn" onclick="toggleSearch()">검색</button>
-    </div>
-  </div>
-
-  <div class="search-wrap" id="searchWrap">
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="지번·도로명 검색 (예: 판포리 2729)" onkeypress="if(event.key==='Enter') searchAddress()" />
-      <button onclick="searchAddress()">이동</button>
-    </div>
-    <div class="search-history" id="searchHistory"></div>
-  </div>
-
-  <div class="area-display">
-    <span class="area-title">면적:</span>
-    <span class="area-values">
-      <span id="totalM2">0.0 ㎡</span>
-      <span class="area-pyeong">(<span id="totalPyeong">0.0</span> 평)</span>
-      <span class="perimeter-inline" id="perimeterWrap" style="display:none;">· 둘레 <span id="perimeterM">0.0</span>m</span>
-    </span>
-  </div>
-</div>
-
-<div class="right-panel">
-  <div class="layer-controls">
-    <button class="layer-btn active" id="btnSky" onclick="toggleSkyview()">위성지도</button>
-    <button class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
-  </div>
-
-  <div class="zoom-controls">
-    <button class="zoom-btn" onclick="zoomIn()" title="확대">+</button>
-    <div class="zoom-badge" id="zoomBadge">L1</div>
-    <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
-  </div>
-</div>
-
-<div class="bottom-wrap">
-  <div class="bottom-bar">
-    <!-- 내 위치: GPS 조준점 -->
-    <button class="action-btn btn-gps" onclick="moveToMyLocation()" title="내 위치" aria-label="내 위치">
-      <svg viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="6"></circle>
-        <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"></circle>
-        <line x1="12" y1="2" x2="12" y2="5"></line>
-        <line x1="12" y1="19" x2="12" y2="22"></line>
-        <line x1="2" y1="12" x2="5" y2="12"></line>
-        <line x1="19" y1="12" x2="22" y2="12"></line>
-      </svg>
-    </button>
-
-    <!-- 이전점 취소: 되돌리기 화살표 -->
-    <button class="action-btn btn-undo" onclick="undoPoint()" title="이전점 취소" aria-label="이전점 취소">
-      <svg viewBox="0 0 24 24">
-        <polyline points="9 14 4 9 9 4"></polyline>
-        <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
-      </svg>
-    </button>
-
-    <!-- 현재 초기화: 휴지통 -->
-    <button class="action-btn btn-clear" onclick="clearCurrent()" title="현재 초기화" aria-label="현재 초기화">
-      <svg viewBox="0 0 24 24">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
-        <path d="M10 11v6"></path>
-        <path d="M14 11v6"></path>
-        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
-      </svg>
-    </button>
-
-    <!-- 캡처모드: 화면 캡처 프레임 -->
-    <button class="action-btn btn-capture" onclick="toggleCaptureMode()" title="캡처모드" aria-label="캡처모드">
-      <svg viewBox="0 0 24 24">
-        <path d="M3 8V5a2 2 0 0 1 2-2h3"></path>
-        <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
-        <path d="M21 16v3a2 2 0 0 1-2 2h-3"></path>
-        <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
-        <rect x="8" y="8" width="8" height="8" rx="1"></rect>
-      </svg>
-    </button>
-  </div>
-</div>
-
-<!-- 편집 복귀: 되돌리기 화살표 아이콘 -->
-<button class="exit-capture-btn" onclick="toggleCaptureMode()" title="편집 복귀" aria-label="편집 복귀">
-  <svg viewBox="0 0 24 24">
-    <polyline points="9 14 4 9 9 4"></polyline>
-    <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
-  </svg>
-</button>
-
-<script>
-  const STORAGE_KEY = 'farea_saved_state_v1';
-  const HISTORY_KEY = 'farea_search_history_v1';
-  const MAX_HISTORY = 10;
-
-  let map, geocoder, myLocationOverlay = null, watchId = null;
-  let mapInitialized = false;
-  let isSkyview = true;
-  let isCadastral = false;
-  let isCaptureMode = false;
-  let isDraggingMap = false;
-  let currentJibun = '';
-  let draggingIndex = null;
-  let pendingDrag = null;
-  let searchHistory = [];
-  const DRAG_THRESHOLD_PX = 6;
-
-  const state = {
-    points: [],
-    overlays: [],
-    polygon: null,
-    perimeterLine: null
-  };
-
-  function isValidCoord(lat, lng) {
-    return (
-      typeof lat === 'number' &&
-      typeof lng === 'number' &&
-      Number.isFinite(lat) &&
-      Number.isFinite(lng) &&
-      lat >= 30 && lat <= 45 &&
-      lng >= 120 && lng <= 135
-    );
-  }
-
-  function startMapBootstrap() {
-    if (mapInitialized) return;
-    if (window.kakao && window.kakao.maps && typeof window.kakao.maps.load === 'function') {
-      window.kakao.maps.load(initMap);
-    } else if (window.kakao && window.kakao.maps && window.kakao.maps.Map) {
-      initMap();
-    }
-  }
-
-  window.addEventListener('DOMContentLoaded', function () {
-    loadSearchHistory();
-    renderSearchHistory();
-    startMapBootstrap();
-  });
-
-  window.addEventListener('load', function () {
-    startMapBootstrap();
-  });
-
-  function loadSearchHistory() {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (!raw) {
-        searchHistory = [];
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      searchHistory = Array.isArray(parsed)
-        ? parsed.filter(item => typeof item === 'string' && item.trim()).slice(0, MAX_HISTORY)
-        : [];
-    } catch (err) {
-      searchHistory = [];
-    }
-  }
-
-  function saveSearchHistoryItem(query) {
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    searchHistory = [
-      trimmed,
-      ...searchHistory.filter(item => item !== trimmed)
-    ].slice(0, MAX_HISTORY);
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory));
-    } catch (err) {}
-    renderSearchHistory();
-  }
-
-  function removeSearchHistoryItem(index) {
-    searchHistory.splice(index, 1);
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory));
-    } catch (err) {}
-    renderSearchHistory();
-  }
-
-  function renderSearchHistory() {
-    const box = document.getElementById('searchHistory');
-    if (!box) return;
-    box.innerHTML = '';
-    if (!searchHistory.length) {
-      box.classList.remove('has-items');
-      return;
-    }
-    box.classList.add('has-items');
-    searchHistory.forEach((item, idx) => {
-      const chip = document.createElement('div');
-      chip.className = 'history-chip';
-
-      const label = document.createElement('span');
-      label.className = 'history-query';
-      label.textContent = item;
-      label.title = item;
-      label.onclick = function (e) {
-        e.stopPropagation();
-        document.getElementById('searchInput').value = item;
-        searchAddress(item);
-      };
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'history-del';
-      delBtn.type = 'button';
-      delBtn.textContent = '×';
-      delBtn.setAttribute('aria-label', `${item} 이력 삭제`);
-      delBtn.onclick = function (e) {
-        e.stopPropagation();
-        removeSearchHistoryItem(idx);
-      };
-
-      chip.appendChild(label);
-      chip.appendChild(delBtn);
-      box.appendChild(chip);
-    });
-  }
-
-  function saveStateToStorage() {
-    try {
-      if (!map) return;
-      const center = map.getCenter();
-      const payload = {
-        points: state.points.map(p => ({ lat: p.getLat(), lng: p.getLng() })),
-        address: currentJibun || '',
-        center: center ? { lat: center.getLat(), lng: center.getLng() } : null,
-        level: map.getLevel()
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    } catch (err) {}
-  }
-
-  function restoreStateFromStorage() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!saved || typeof saved !== 'object') return;
-
-      if (saved.center && isValidCoord(saved.center.lat, saved.center.lng)) {
-        map.setCenter(new kakao.maps.LatLng(saved.center.lat, saved.center.lng));
-      }
-      if (typeof saved.level === 'number' && Number.isFinite(saved.level)) {
-        const clampedLevel = Math.min(14, Math.max(1, Math.round(saved.level)));
-        map.setLevel(clampedLevel);
-      }
-
-      if (Array.isArray(saved.points) && saved.points.length > 0) {
-        saved.points.forEach((pt, idx) => {
-          if (pt && isValidCoord(pt.lat, pt.lng)) {
-            addPoint(new kakao.maps.LatLng(pt.lat, pt.lng), {
-              skipSave: true,
-              skipAddressLookup: idx === 0 && Boolean(saved.address)
-            });
-          }
-        });
-        if (typeof saved.address === 'string' && saved.address.trim()) {
-          currentJibun = saved.address.trim();
-          document.getElementById('addressText').innerText = currentJibun;
-        }
-        if (state.points[0]) {
-          map.setCenter(state.points[0]);
-        }
-      }
-    } catch (err) {
-      try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
-    }
-  }
-
-  function initMap() {
-    if (mapInitialized) return;
-    mapInitialized = true;
-
-    const container = document.getElementById('map');
-    map = new kakao.maps.Map(container, {
-      center: new kakao.maps.LatLng(33.3617, 126.5292),
-      level: 1,
-      mapTypeId: kakao.maps.MapTypeId.HYBRID,
-      draggable: true
-    });
-    geocoder = new kakao.maps.services.Geocoder();
-
-    state.polygon = new kakao.maps.Polygon({
-      map: map, path: [], strokeWeight: 3, strokeColor: '#ff1744',
-      strokeOpacity: 0.98, fillColor: '#ff1744', fillOpacity: 0.16
-    });
-
-    state.perimeterLine = new kakao.maps.Polyline({
-      path: []
-    });
-
-    kakao.maps.event.addListener(map, 'dragstart', function () {
-      isDraggingMap = true;
-    });
-
-    kakao.maps.event.addListener(map, 'dragend', function () {
-      saveStateToStorage();
-      setTimeout(() => {
-        isDraggingMap = false;
-      }, 200);
-    });
-
-    kakao.maps.event.addListener(map, 'click', function (mouseEvent) {
-      if (isCaptureMode || draggingIndex !== null || isDraggingMap) return;
-      const searchWrap = document.getElementById('searchWrap');
-      if (searchWrap.classList.contains('open')) {
-        searchWrap.classList.remove('open');
-        return;
-      }
-      addPoint(mouseEvent.latLng);
-    });
-
-    kakao.maps.event.addListener(map, 'zoom_changed', function () {
-      updateZoomBadge();
-      saveStateToStorage();
-    });
-
-    restoreStateFromStorage();
-    updateZoomBadge();
-    saveStateToStorage();
-
-    window.addEventListener('pointermove', handlePointDragMove, { passive: false });
-    window.addEventListener('pointerup', handlePointDragEnd);
-    window.addEventListener('pointercancel', handlePointDragEnd);
-  }
-
-  function screenClientToLatLng(clientX, clientY) {
-    const rect = document.getElementById('map').getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    const proj = map.getProjection();
-    return proj.coordsFromContainerPoint(new kakao.maps.Point(x, y));
-  }
-
-  function handlePointDragMove(e) {
-    if (!map) return;
-
-    if (draggingIndex === null && pendingDrag) {
-      const dx = e.clientX - pendingDrag.startX;
-      const dy = e.clientY - pendingDrag.startY;
-      if (Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX) {
-        draggingIndex = pendingDrag.index;
-        pendingDrag = null;
-        map.setDraggable(false);
-      } else {
-        return;
-      }
+    .history-chip-del {
+      border: none;
+      background: transparent;
+      color: #78909c;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0 2px;
+      cursor: pointer;
     }
 
-    if (draggingIndex === null) return;
-    e.preventDefault();
-    const nextLatLng = screenClientToLatLng(e.clientX, e.clientY);
-    state.points[draggingIndex] = nextLatLng;
-    const ov = state.overlays[draggingIndex];
-    if (ov) ov.setPosition(nextLatLng);
-    updateCalculations();
-  }
-
-  function handlePointDragEnd() {
-    pendingDrag = null;
-    if (draggingIndex === null) return;
-    const movedIdx = draggingIndex;
-    draggingIndex = null;
-    if (map) map.setDraggable(true);
-    if (movedIdx === 0 && state.points[0]) {
-      updateAddressFromCoord(state.points[0]);
-    } else {
-      saveStateToStorage();
+    /* 정보 카드 */
+    .info-card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 10px;
+      padding: 9px 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+      color: #1c242b;
     }
-  }
-
-  function toggleCaptureMode() {
-    isCaptureMode = !isCaptureMode;
-    document.body.classList.toggle('capture-mode', isCaptureMode);
-    if (isCaptureMode) {
-      document.getElementById('searchWrap').classList.remove('open');
+    .addr-line {
+      font-size: 13px;
+      font-weight: 600;
+      color: #37474f;
+      margin-bottom: 4px;
+      word-break: break-all;
     }
-    if (map) {
-      setTimeout(() => map.relayout(), 50);
+    .measure-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #0d47a1;
     }
-  }
-
-  function updateZoomBadge() {
-    if (!map) return;
-    document.getElementById('zoomBadge').innerText = 'L' + map.getLevel();
-  }
-
-  function zoomIn() {
-    if (!map) return;
-    const lv = map.getLevel();
-    if (lv > 1) map.setLevel(lv - 1);
-  }
-
-  function zoomOut() {
-    if (!map) return;
-    const lv = map.getLevel();
-    if (lv < 14) map.setLevel(lv + 1);
-  }
-
-  function toggleSearch() {
-    const wrap = document.getElementById('searchWrap');
-    wrap.classList.toggle('open');
-    if (wrap.classList.contains('open')) {
-      renderSearchHistory();
-      document.getElementById('searchInput').focus();
+    .perimeter-span {
+      font-size: 13px;
+      font-weight: 700;
+      color: #00695c;
     }
-  }
-
-  function addPoint(latLng, options = {}) {
-    if (!map || !latLng) return;
-    const pointIndex = state.points.length;
-    state.points.push(latLng);
-
-    const hitEl = document.createElement('div');
-    hitEl.className = 'pt-dot-hit';
-    hitEl.innerHTML = '<div class="pt-dot-total"></div>';
-
-    hitEl.addEventListener('pointerdown', function (e) {
-      if (isCaptureMode) return;
-      e.stopPropagation();
-      const currentIdx = state.overlays.indexOf(overlay);
-      if (currentIdx === -1) return;
-      pendingDrag = {
-        index: currentIdx,
-        startX: e.clientX,
-        startY: e.clientY
-      };
-    });
-
-    const overlay = new kakao.maps.CustomOverlay({
-      position: latLng,
-      content: hitEl,
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 4
-    });
-    overlay.setMap(map);
-    state.overlays.push(overlay);
-
-    if (pointIndex === 0 && !options.skipAddressLookup) {
-      updateAddressFromCoord(latLng, options.skipSave);
-    } else if (!options.skipSave) {
-      saveStateToStorage();
+    .sub-line {
+      margin-top: 2px;
+      font-size: 12px;
+      color: #546e7a;
     }
 
-    updateCalculations();
-  }
-
-  function updateAddressFromCoord(latLng, skipSave = false) {
-    if (!geocoder || !latLng) return;
-    geocoder.coord2Address(latLng.getLng(), latLng.getLat(), function (result, status) {
-      if (status === kakao.maps.services.Status.OK && result[0]) {
-        const jibun = result[0].address ? result[0].address.address_name : '';
-        const road = result[0].road_address ? result[0].road_address.address_name : '';
-        currentJibun = jibun || road;
-        document.getElementById('addressText').innerText = jibun || road;
-        if (!skipSave) saveStateToStorage();
-      }
-    });
-  }
-
-  function updateCalculations() {
-    if (!state.polygon || !state.perimeterLine) return;
-    state.polygon.setPath(state.points);
-
-    const tM2 = state.points.length >= 3 ? state.polygon.getArea() : 0;
-    const tPyeong = tM2 / 3.305785;
-
-    document.getElementById('totalM2').innerText = `${tM2.toFixed(1)} ㎡`;
-    document.getElementById('totalPyeong').innerText = tPyeong.toFixed(1);
-
-    const perimeterWrap = document.getElementById('perimeterWrap');
-    const perimeterM = document.getElementById('perimeterM');
-
-    if (state.points.length >= 2) {
-      const closedPath = state.points.length >= 3
-        ? [...state.points, state.points[0]]
-        : state.points;
-      state.perimeterLine.setPath(closedPath);
-      const lengthM = state.perimeterLine.getLength();
-      perimeterM.innerText = lengthM.toFixed(1);
-      perimeterWrap.style.display = 'inline';
-    } else {
-      perimeterWrap.style.display = 'none';
-      perimeterM.innerText = '0.0';
-    }
-  }
-
-  function undoPoint() {
-    if (state.points.length === 0) return;
-    state.points.pop();
-    const ov = state.overlays.pop();
-    if (ov) ov.setMap(null);
-
-    if (state.points.length === 0) {
-      currentJibun = '';
-      document.getElementById('addressText').innerText = '지도 터치 시 지번 표시';
-    }
-    updateCalculations();
-    saveStateToStorage();
-  }
-
-  function clearCurrent() {
-    state.points = [];
-    state.overlays.forEach(ov => ov.setMap(null));
-    state.overlays = [];
-    currentJibun = '';
-    document.getElementById('addressText').innerText = '지도 터치 시 지번 표시';
-    updateCalculations();
-    saveStateToStorage();
-  }
-
-  function toggleSkyview() {
-    if (!map) return;
-    isSkyview = !isSkyview;
-    map.setMapTypeId(isSkyview ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP);
-    document.getElementById('btnSky').classList.toggle('active', isSkyview);
-  }
-
-  function toggleCadastral() {
-    if (!map) return;
-    isCadastral = !isCadastral;
-    if (isCadastral) {
-      map.addOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
-    } else {
-      map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
-    }
-    document.getElementById('btnCadastral').classList.toggle('active', isCadastral);
-  }
-
-  function showYellowDot(latLng) {
-    if (!map) return;
-    if (myLocationOverlay) {
-      myLocationOverlay.setPosition(latLng);
-      myLocationOverlay.setMap(map);
-      return;
-    }
-    const content = document.createElement('div');
-    content.className = 'yellow-dot-wrap';
-    content.innerHTML = '<div class="yellow-dot-pulse"></div><div class="yellow-dot-core"></div>';
-    myLocationOverlay = new kakao.maps.CustomOverlay({
-      position: latLng,
-      content: content,
-      xAnchor: 0.5,
-      yAnchor: 0.5,
-      zIndex: 5
-    });
-    myLocationOverlay.setMap(map);
-  }
-
-  function startWatchMyLocation() {
-    if (!navigator.geolocation || !map) return;
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-
-    watchId = navigator.geolocation.watchPosition(
-      pos => {
-        const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        showYellowDot(loc);
-      },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
-    );
-  }
-
-  function moveToMyLocation(silent) {
-    if (!navigator.geolocation) {
-      if (!silent) alert('이 기기에서 위치 정보를 지원하지 않습니다.');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const loc = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
-        showYellowDot(loc);
-        map.setCenter(loc);
-        map.setLevel(1);
-        startWatchMyLocation();
-        saveStateToStorage();
-      },
-      () => {
-        if (!silent) alert('위치 권한을 허용해 주세요.');
-      },
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
-  }
-
-  function searchAddress(overrideQuery) {
-    if (!geocoder || !map) return;
-    const rawQuery = typeof overrideQuery === 'string'
-      ? overrideQuery
-      : document.getElementById('searchInput').value;
-    const query = rawQuery.trim();
-    if (!query) return;
-    geocoder.addressSearch(query, function (result, status) {
-      if (status === kakao.maps.services.Status.OK) {
-        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
-        map.setCenter(coords);
-        map.setLevel(1);
-        saveSearchHistoryItem(query);
-        document.getElementById('searchWrap').classList.remove('open');
-        saveStateToStorage();
-      } else {
-        alert('주소를 찾을 수 없습니다. 지번이나 도로명을 정확히 입력해 주세요.');
-      }
-    });
-  }
-</script>
-</body>
-</html>
+    /* 화면 안쪽 토스트 안내 */
+    .toast
