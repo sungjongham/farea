@@ -136,7 +136,28 @@
       display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
     }
     .layer-controls {
-      display: flex; flex-direction: column; gap: 6px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .layer-icon-btn {
+      width: 40px; height: 40px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.96);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .layer-icon-btn:active { transform: scale(0.96); }
+    .layer-icon-btn svg {
+      width: 21px; height: 21px; flex-shrink: 0;
+      stroke: currentColor; fill: none;
+      stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .layer-icon-btn.active {
+      background: #e0f2fe;
+      color: #0369a1;
+      border-color: #0284c7;
     }
     .layer-btn {
       padding: 7px 10px;
@@ -350,8 +371,16 @@
 
 <div class="right-panel">
   <div class="layer-controls">
-    <button class="layer-btn active" id="btnSky" onclick="toggleSkyview()">위성지도</button>
-    <button class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
+    <button type="button" class="layer-icon-btn active" id="btnSky" onclick="toggleSkyview()" title="위성지도" aria-label="위성지도">
+      <!-- 위성/지구 아이콘 SVG -->
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <ellipse cx="12" cy="12" rx="4.2" ry="9"></ellipse>
+        <line x1="3.5" y1="9.5" x2="20.5" y2="9.5"></line>
+        <line x1="3.5" y1="14.5" x2="20.5" y2="14.5"></line>
+      </svg>
+    </button>
+    <button type="button" class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
   </div>
 
   <div class="zoom-controls">
@@ -360,7 +389,7 @@
     <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
   </div>
 
-  <!-- 확대/축소 바로 밑: 빨간 압정 핀 / 발자국 한 쌍 -->
+  <!-- 확대/축소 밑: 빨간 압정 핀 / 발자국 한 쌍 -->
   <div class="side-mode-controls" role="group" aria-label="측정 모드">
     <button type="button" class="side-mode-btn active-manual" id="btnModeManual" onclick="setMeasureMode('manual')" title="수동 찍기" aria-label="수동 찍기">
       <!-- 빨간 압정 핀 SVG -->
