@@ -160,4 +160,746 @@
     }
 
     /* 화면 안쪽 토스트 안내 */
-    .toast
+    .toast {
+      position: fixed;
+      top: 148px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      background: rgba(33, 33, 33, 0.9);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      max-width: calc(100% - 24px);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toast.show {
+      opacity: 1;
+    }
+
+    /* 우측 맵 컨트롤 */
+    .right-controls {
+      position: fixed;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ctrl-group {
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    }
+    .ctrl-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-bottom: 1px solid #eceff1;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 700;
+      color: #263238;
+      cursor: pointer;
+    }
+    .ctrl-btn:last-child {
+      border-bottom: none;
+    }
+    .ctrl-btn.active {
+      background: #1e88e5;
+      color: #fff;
+    }
+
+    /* 하단 버튼 4개 (네이버 하단 툴바 간섭 완화 위해 24px 여백) */
+    .bottom-wrap {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: 24px;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .act-btn {
+      height: 44px;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    .btn-gps { background: #2e7d32; }
+    .btn-undo { background: #ef6c00; }
+    .btn-reset { background: #c62828; }
+    .btn-capture { background: #37474f; }
+
+    /* 캡처 모드 복귀 버튼 */
+    .capture-exit-btn {
+      display: none;
+      position: fixed;
+      right: 12px;
+      bottom: 26px;
+      z-index: 35;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(28, 36, 43, 0.92);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+    body.capture-mode .top-wrap,
+    body.capture-mode .right-controls,
+    body.capture-mode .bottom-wrap,
+    body.capture-mode .toast {
+      display: none !important;
+    }
+    body.capture-mode .capture-exit-btn {
+      display: block;
+    }
+
+    /* 포인트 마커 */
+    .pt-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ff1744;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+      transform: translate(-50%, -50%);
+    }
+
+    /* 현재 위치 노란 점 */
+    .yellow-dot-wrap {
+      position: relative;
+      width: 20px;
+      height: 20px;
+      transform: translate(-50%, -50%);
+    }
+    .yellow-dot {
+      width: 16px;
+      height: 16px;
+      margin: 2px;
+      border-radius: 50%;
+      background: #ffd600;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.45);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="top-wrap">
+    <div class="search-box">
+      <input id="searchInput" type="text" placeholder="주소 또는 지번 입력 (예: 한경면 판포리 123)" autocomplete="off" />
+      <button id="searchBtn" type="button">검색</button>
+    </div>
+
+    <div id="historyBar" class="history-bar"></div>
+
+    <div class="info-card">
+      <div id="addrText" class="addr-line">지도에서 지점을 눌러 면적을 측정하세요</div>
+      <div class="measure-line">
+        <span id="areaText">0.0 ㎡ (0.0 평)</span>
+        <span id="perimeterText" class="perimeter-span"></span>
+      </div>
+      <div id="pointCountText" class="sub-line">포인트: 0개</div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div class="right-controls">
+    <div class="ctrl-group">
+      <button id="zoomInBtn" class="ctrl-btn" type="button">+</button>
+      <button id="zoomOutBtn" class="ctrl-btn" type="button">−</button>
+    </div>
+    <div class="ctrl-group">
+      <button id="skyBtn" class="ctrl-btn" type="button">위성</button>
+      <button id="cadastralBtn" class="ctrl-btn" type="button">지적</button>
+    </div>
+  </div>
+
+  <div class="bottom-wrap">
+    <button id="gpsBtn" class="act-btn btn-gps" type="button">내 위치</button>
+    <button id="undoBtn" class="act-btn btn-undo" type="button">이전점 취소</button>
+    <button id="resetBtn" class="act-btn btn-reset" type="button">초기화</button>
+    <button id="captureBtn" class="act-btn btn-capture" type="button">캡처모드</button>
+  </div>
+
+  <button id="captureExitBtn" class="capture-exit-btn" type="button">화면 복귀</button>
+
+  <script>
+    (function () {
+      const STORAGE_STATE_KEY = "farea_saved_state_v1";
+      const STORAGE_HISTORY_KEY = "farea_search_history_v1";
+      const MAX_HISTORY = 10;
+      const DRAG_THRESHOLD_PX = 6;
+      const GPS_REUSE_MS = 10000;
+
+      const DEFAULT_CENTER = { lat: 33.3442, lng: 126.2046 };
+      const DEFAULT_LEVEL = 2;
+
+      let map = null;
+      let geocoder = null;
+      let places = null;
+
+      let points = []; // { lat, lng }
+      let firstPointAddress = "";
+      let pointOverlays = [];
+      let shapeOverlay = null;
+
+      let yellowDotOverlay = null;
+      let watchId = null;
+      let lastGpsFix = null; // { lat, lng, ts }
+
+      let isSatellite = false;
+      let isCadastral = false;
+
+      let downPos = null;
+      let isDragging = false;
+      let toastTimer = null;
+
+      function showToast(msg) {
+        const el = document.getElementById("toast");
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.classList.remove("show");
+        }, 2200);
+      }
+
+      function isValidLatLng(lat, lng) {
+        return (
+          typeof lat === "number" &&
+          typeof lng === "number" &&
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          lat >= -90 && lat <= 90 &&
+          lng >= -180 && lng <= 180
+        );
+      }
+
+      function loadSavedState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_STATE_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== "object") return null;
+
+          const validPoints = Array.isArray(parsed.points)
+            ? parsed.points.filter((p) => p && isValidLatLng(p.lat, p.lng))
+            : [];
+
+          const center =
+            parsed.center && isValidLatLng(parsed.center.lat, parsed.center.lng)
+              ? { lat: parsed.center.lat, lng: parsed.center.lng }
+              : DEFAULT_CENTER;
+
+          const level =
+            typeof parsed.level === "number" && Number.isFinite(parsed.level)
+              ? Math.max(1, Math.min(14, Math.round(parsed.level)))
+              : DEFAULT_LEVEL;
+
+          return {
+            points: validPoints,
+            address: typeof parsed.address === "string" ? parsed.address : "",
+            center,
+            level
+          };
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function saveState() {
+        try {
+          if (!map) return;
+          const c = map.getCenter();
+          const payload = {
+            points,
+            address: firstPointAddress,
+            center: { lat: c.getLat(), lng: c.getLng() },
+            level: map.getLevel(),
+            updatedAt: Date.now()
+          };
+          localStorage.setItem(STORAGE_STATE_KEY, JSON.stringify(payload));
+        } catch (e) {
+          // 저장 실패 무시
+        }
+      }
+
+      function loadSearchHistory() {
+        try {
+          const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+          if (!raw) return [];
+          const arr = JSON.parse(raw);
+          if (!Array.isArray(arr)) return [];
+          return arr.filter((item) => typeof item === "string" && item.trim()).slice(0, MAX_HISTORY);
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveSearchHistory(list) {
+        try {
+          localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(list.slice(0, MAX_HISTORY)));
+        } catch (e) {
+          // 무시
+        }
+      }
+
+      function addSearchHistory(query) {
+        const q = (query || "").trim();
+        if (!q) return;
+        const current = loadSearchHistory().filter((item) => item !== q);
+        current.unshift(q);
+        const trimmed = current.slice(0, MAX_HISTORY);
+        saveSearchHistory(trimmed);
+        renderSearchHistory();
+      }
+
+      function removeSearchHistory(query) {
+        const next = loadSearchHistory().filter((item) => item !== query);
+        saveSearchHistory(next);
+        renderSearchHistory();
+      }
+
+      function renderSearchHistory() {
+        const bar = document.getElementById("historyBar");
+        if (!bar) return;
+        const list = loadSearchHistory();
+        bar.innerHTML = "";
+
+        if (list.length === 0) {
+          bar.classList.remove("show");
+          return;
+        }
+
+        bar.classList.add("show");
+        list.forEach((keyword) => {
+          const chip = document.createElement("div");
+          chip.className = "history-chip";
+
+          const textBtn = document.createElement("span");
+          textBtn.className = "history-chip-text";
+          textBtn.textContent = keyword;
+          textBtn.title = keyword;
+          textBtn.addEventListener("click", () => {
+            const input = document.getElementById("searchInput");
+            if (input) input.value = keyword;
+            runSearch(keyword);
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "history-chip-del";
+          delBtn.textContent = "×";
+          delBtn.setAttribute("aria-label", `${keyword} 삭제`);
+          delBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            removeSearchHistory(keyword);
+          });
+
+          chip.appendChild(textBtn);
+          chip.appendChild(delBtn);
+          bar.appendChild(chip);
+        });
+      }
+
+      // Haversine 거리 (m)
+      function calcDistanceMeters(a, b) {
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const lat1 = toRad(a.lat);
+        const lat2 = toRad(b.lat);
+        const h =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+      }
+
+      // 둘레 계산 (2개 이상부터 표시: 2개는 선분 길이, 3개 이상은 닫힌 둘레)
+      function calcPerimeterMeters(pts) {
+        if (!Array.isArray(pts) || pts.length < 2) return 0;
+        let total = 0;
+        for (let i = 0; i < pts.length - 1; i++) {
+          total += calcDistanceMeters(pts[i], pts[i + 1]);
+        }
+        if (pts.length >= 3) {
+          total += calcDistanceMeters(pts[pts.length - 1], pts[0]);
+        }
+        return total;
+      }
+
+      // 구면 다각형 면적 계산 (㎡)
+      function calcAreaSqMeters(pts) {
+        if (!Array.isArray(pts) || pts.length < 3) return 0;
+        const R = 6371000;
+        const toRad = (deg) => (deg * Math.PI) / 180;
+        let sum = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const p1 = pts[i];
+          const p2 = pts[(i + 1) % pts.length];
+          const lat1 = toRad(p1.lat);
+          const lat2 = toRad(p2.lat);
+          const dLng = toRad(p2.lng - p1.lng);
+          sum += dLng * (2 + Math.sin(lat1) + Math.sin(lat2));
+        }
+        return Math.abs((sum * R * R) / 2);
+      }
+
+      function updateMeasurementUI() {
+        const areaSqM = calcAreaSqMeters(points);
+        const pyeong = areaSqM / 3.305785;
+        const areaEl = document.getElementById("areaText");
+        const perimEl = document.getElementById("perimeterText");
+        const countEl = document.getElementById("pointCountText");
+        const addrEl = document.getElementById("addrText");
+
+        if (areaEl) {
+          areaEl.textContent = `${areaSqM.toFixed(1)} ㎡ (${pyeong.toFixed(1)} 평)`;
+        }
+
+        if (perimEl) {
+          if (points.length >= 2) {
+            const perim = calcPerimeterMeters(points);
+            perimEl.textContent = `· 둘레 ${perim.toFixed(1)} m`;
+          } else {
+            perimEl.textContent = "";
+          }
+        }
+
+        if (countEl) {
+          countEl.textContent = `포인트: ${points.length}개`;
+        }
+
+        if (addrEl) {
+          addrEl.textContent =
+            firstPointAddress ||
+            (points.length > 0 ? "주소 조회 중..." : "지도에서 지점을 눌러 면적을 측정하세요");
+        }
+      }
+
+      function clearOverlays() {
+        pointOverlays.forEach((ov) => ov.setMap(null));
+        pointOverlays = [];
+        if (shapeOverlay) {
+          shapeOverlay.setMap(null);
+          shapeOverlay = null;
+        }
+      }
+
+      function renderPointsAndShape() {
+        clearOverlays();
+        if (!map) return;
+
+        points.forEach((pt) => {
+          const pos = new kakao.maps.LatLng(pt.lat, pt.lng);
+          const dot = document.createElement("div");
+          dot.className = "pt-dot";
+          const ov = new kakao.maps.CustomOverlay({
+            position: pos,
+            content: dot,
+            yAnchor: 0.5,
+            xAnchor: 0.5
+          });
+          ov.setMap(map);
+          pointOverlays.push(ov);
+        });
+
+        const path = points.map((pt) => new kakao.maps.LatLng(pt.lat, pt.lng));
+        if (path.length >= 3) {
+          shapeOverlay = new kakao.maps.Polygon({
+            path,
+            strokeWeight: 2.5,
+            strokeColor: "#ff1744",
+            strokeOpacity: 0.9,
+            fillColor: "#ff5252",
+            fillOpacity: 0.25
+          });
+          shapeOverlay.setMap(map);
+        } else if (path.length === 2) {
+          shapeOverlay = new kakao.maps.Polyline({
+            path,
+            strokeWeight: 2.5,
+            strokeColor: "#ff1744",
+            strokeOpacity: 0.9
+          });
+          shapeOverlay.setMap(map);
+        }
+
+        updateMeasurementUI();
+      }
+
+      function lookupAddressForFirstPoint(pt) {
+        if (!geocoder || !pt) return;
+        const coord = new kakao.maps.LatLng(pt.lat, pt.lng);
+        geocoder.coord2Address(coord.getLng(), coord.getLat(), (result, status) => {
+          if (status === kakao.maps.services.Status.OK && result && result[0]) {
+            const road = result[0].road_address ? result[0].road_address.address_name : "";
+            const jibun = result[0].address ? result[0].address.address_name : "";
+            firstPointAddress = jibun || road || `${pt.lat.toFixed(6)}, ${pt.lng.toFixed(6)}`;
+          } else {
+            firstPointAddress = `${pt.lat.toFixed(6)}, ${pt.lng.toFixed(6)}`;
+          }
+          updateMeasurementUI();
+          saveState();
+        });
+      }
+
+      function addPoint(lat, lng) {
+        if (!isValidLatLng(lat, lng)) return;
+        points.push({ lat, lng });
+        if (points.length === 1) {
+          firstPointAddress = "";
+          lookupAddressForFirstPoint(points[0]);
+        }
+        renderPointsAndShape();
+        saveState();
+      }
+
+      function undoLastPoint() {
+        if (points.length === 0) {
+          showToast("취소할 포인트가 없습니다.");
+          return;
+        }
+        points.pop();
+        if (points.length === 0) {
+          firstPointAddress = "";
+        } else if (points.length === 1) {
+          lookupAddressForFirstPoint(points[0]);
+        }
+        renderPointsAndShape();
+        saveState();
+      }
+
+      function resetAllPoints() {
+        points = [];
+        firstPointAddress = "";
+        renderPointsAndShape();
+        saveState();
+        showToast("초기화되었습니다.");
+      }
+
+      function updateYellowDot(lat, lng) {
+        if (!map || !isValidLatLng(lat, lng)) return;
+        const pos = new kakao.maps.LatLng(lat, lng);
+        if (!yellowDotOverlay) {
+          const wrap = document.createElement("div");
+          wrap.className = "yellow-dot-wrap";
+          const inner = document.createElement("div");
+          inner.className = "yellow-dot";
+          wrap.appendChild(inner);
+
+          yellowDotOverlay = new kakao.maps.CustomOverlay({
+            position: pos,
+            content: wrap,
+            yAnchor: 0.5,
+            xAnchor: 0.5
+          });
+          yellowDotOverlay.setMap(map);
+        } else {
+          yellowDotOverlay.setPosition(pos);
+          yellowDotOverlay.setMap(map);
+        }
+      }
+
+      function startWatchPosition() {
+        if (!navigator.geolocation || watchId !== null) return;
+        try {
+          watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              if (isValidLatLng(lat, lng)) {
+                lastGpsFix = { lat, lng, ts: Date.now() };
+                updateYellowDot(lat, lng);
+              }
+            },
+            () => {},
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+          );
+        } catch (e) {
+          // 무시
+        }
+      }
+
+      function applyGpsPosition(lat, lng) {
+        if (!map || !isValidLatLng(lat, lng)) return;
+        const target = new kakao.maps.LatLng(lat, lng);
+        map.setLevel(1);
+        map.setCenter(target);
+        updateYellowDot(lat, lng);
+        startWatchPosition();
+        saveState();
+        showToast("현재 위치로 이동했습니다.");
+      }
+
+      function handleGpsClick() {
+        if (!navigator.geolocation) {
+          showToast("이 기기에서 위치 정보를 지원하지 않습니다.");
+          return;
+        }
+
+        // 최근 10초 이내 성공 좌표가 있으면 즉시 재사용
+        if (lastGpsFix && Date.now() - lastGpsFix.ts <= GPS_REUSE_MS) {
+          applyGpsPosition(lastGpsFix.lat, lastGpsFix.lng);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            if (!isValidLatLng(lat, lng)) {
+              showToast("유효한 좌표를 가져오지 못했습니다.");
+              return;
+            }
+            lastGpsFix = { lat, lng, ts: Date.now() };
+            applyGpsPosition(lat, lng);
+          },
+          (err) => {
+            if (err && err.code === 1) {
+              showToast("위치 권한이 허용되지 않았습니다.");
+            } else {
+              showToast("현재 위치를 가져오지 못했습니다.");
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+      }
+
+      function runSearch(rawKeyword) {
+        const keyword = (rawKeyword || "").trim();
+        if (!keyword) {
+          showToast("검색할 주소나 지명을 입력해 주세요.");
+          return;
+        }
+        if (!geocoder || !places || !map) return;
+
+        geocoder.addressSearch(keyword, (result, status) => {
+          if (status === kakao.maps.services.Status.OK && result && result[0]) {
+            const lat = parseFloat(result[0].y);
+            const lng = parseFloat(result[0].x);
+            if (isValidLatLng(lat, lng)) {
+              map.setCenter(new kakao.maps.LatLng(lat, lng));
+              addSearchHistory(keyword);
+              saveState();
+              showToast(`이동: ${result[0].address_name || keyword}`);
+              return;
+            }
+          }
+
+          places.keywordSearch(keyword, (pResult, pStatus) => {
+            if (pStatus === kakao.maps.services.Status.OK && pResult && pResult[0]) {
+              const lat = parseFloat(pResult[0].y);
+              const lng = parseFloat(pResult[0].x);
+              if (isValidLatLng(lat, lng)) {
+                map.setCenter(new kakao.maps.LatLng(lat, lng));
+                addSearchHistory(keyword);
+                saveState();
+                showToast(`이동: ${pResult[0].place_name || keyword}`);
+                return;
+              }
+            }
+            showToast("검색 결과가 없습니다.");
+          });
+        });
+      }
+
+      function bindEvents() {
+        const searchBtn = document.getElementById("searchBtn");
+        const searchInput = document.getElementById("searchInput");
+
+        searchBtn.addEventListener("click", () => runSearch(searchInput.value));
+        searchInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            runSearch(searchInput.value);
+          }
+        });
+
+        document.getElementById("zoomInBtn").addEventListener("click", () => {
+          if (!map) return;
+          map.setLevel(Math.max(1, map.getLevel() - 1));
+          saveState();
+        });
+
+        document.getElementById("zoomOutBtn").addEventListener("click", () => {
+          if (!map) return;
+          map.setLevel(Math.min(14, map.getLevel() + 1));
+          saveState();
+        });
+
+        const skyBtn = document.getElementById("skyBtn");
+        skyBtn.addEventListener("click", () => {
+          if (!map) return;
+          isSatellite = !isSatellite;
+          map.setMapTypeId(
+            isSatellite ? kakao.maps.MapTypeId.HYBRID : kakao.maps.MapTypeId.ROADMAP
+          );
+          skyBtn.classList.toggle("active", isSatellite);
+        });
+
+        const cadastralBtn = document.getElementById("cadastralBtn");
+        cadastralBtn.addEventListener("click", () => {
+          if (!map) return;
+          isCadastral = !isCadastral;
+          if (isCadastral) {
+            map.addOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
+          } else {
+            map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);
+          }
+          cadastralBtn.classList.toggle("active", isCadastral);
+        });
+
+        document.getElementById("gpsBtn").addEventListener("click", handleGpsClick);
+        document.getElementById("undoBtn").addEventListener("click", undoLastPoint);
+        document.getElementById("resetBtn").addEventListener("click", resetAllPoints);
+
+        document.getElementById("captureBtn").addEventListener("click", () => {
+          document.body.classList.add("capture-mode");
+        });
+        document.getElementById("captureExitBtn").addEventListener("click", () => {
+          document.body.classList.remove("capture-mode");
+        });
+      }
+
+      function initMap() {
+        const saved = loadSavedState();
+        const initCenter = saved ? saved.center : DEFAULT_CENTER;
+        const initLevel = saved ? saved.level : DEFAULT_LEVEL;
+
+        const container = document.getElementById("map");
+        map = new kakao.maps.Map(container, {
+          center: new kakao.maps.LatLng(initCenter.lat, initCenter.lng),
+          level: initLevel
+        });
+
+        geocoder = new kakao.maps.services.Geocoder();
+        places = new kakao.maps.services.Places();
