@@ -130,10 +130,10 @@
       color: #0284c7; font-size: 14px; font-weight: 900; margin-left: 4px;
     }
 
-    /* 우측 패널: 밝은 화이트/라이트 그레이 박스로 모양·글씨 뚜렷하게 통일 */
+    /* 우측 패널: 모든 버튼 40×40px 라인 정렬 및 밝은 화이트 박스 통일 */
     .right-panel {
       position: absolute; top: calc(152px + env(safe-area-inset-top)); right: 8px; z-index: 12;
-      display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
     }
     .layer-controls {
       display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -148,30 +148,33 @@
       backdrop-filter: blur(10px);
       display: flex; align-items: center; justify-content: center;
     }
-    .layer-icon-btn:active { transform: scale(0.96); }
+    .layer-icon-btn:active { background: #e2e8f0; transform: scale(0.96); }
     .layer-icon-btn svg {
       width: 21px; height: 21px; flex-shrink: 0;
       stroke: currentColor; fill: none;
       stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round;
     }
     .layer-icon-btn.active {
-      background: #e0f2fe;
-      color: #0369a1;
+      background: rgba(255, 255, 255, 0.96);
+      color: #0284c7;
       border-color: #0284c7;
     }
     .layer-btn {
-      padding: 7px 10px;
+      width: 40px; height: 40px;
+      padding: 0 2px;
       border: 1.5px solid #cbd5e1;
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.96);
-      color: #0f172a; font-size: 11px; font-weight: 900;
+      color: #0f172a; font-size: 10px; font-weight: 900; line-height: 1.05;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
       backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: center; text-align: center;
     }
+    .layer-btn:active { background: #e2e8f0; transform: scale(0.96); }
     .layer-btn.active {
-      background: #0284c7;
-      color: #ffffff;
-      border-color: #0369a1;
+      background: #e0f2fe;
+      color: #0369a1;
+      border-color: #0284c7;
     }
 
     .zoom-controls {
@@ -380,7 +383,7 @@
         <line x1="3.5" y1="14.5" x2="20.5" y2="14.5"></line>
       </svg>
     </button>
-    <button type="button" class="layer-btn" id="btnCadastral" onclick="toggleCadastral()">지적편집도</button>
+    <button type="button" class="layer-btn" id="btnCadastral" onclick="toggleCadastral()" title="지적도" aria-label="지적도">지적도</button>
   </div>
 
   <div class="zoom-controls">
