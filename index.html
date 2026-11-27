@@ -218,7 +218,7 @@
     }
     .side-mode-btn:active { transform: scale(0.96); }
     .side-mode-btn svg {
-      width: 22px; height: 22px; flex-shrink: 0;
+      width: 24px; height: 24px; flex-shrink: 0;
     }
     .side-mode-btn.active-manual {
       background: #fff1f2;
@@ -404,18 +404,23 @@
     </button>
 
     <button type="button" class="side-mode-btn" id="btnModeWalk" onclick="setMeasureMode('walk')" title="도보 자동 (3m 간격)" aria-label="도보 자동 (3m 간격)">
-      <!-- 발자국 한 쌍 SVG -->
-      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <ellipse cx="7.5" cy="11.2" rx="2.7" ry="4.1" transform="rotate(-12 7.5 11.2)"/>
-        <ellipse cx="7.6" cy="18.2" rx="2.1" ry="2.2" transform="rotate(-8 7.6 18.2)"/>
-        <circle cx="5.2" cy="5.6" r="1.05"/>
-        <circle cx="7.3" cy="4.9" r="1.05"/>
-        <circle cx="9.3" cy="5.5" r="0.95"/>
-        <ellipse cx="16.5" cy="9.2" rx="2.7" ry="4.1" transform="rotate(12 16.5 9.2)"/>
-        <ellipse cx="16.4" cy="16.2" rx="2.1" ry="2.2" transform="rotate(8 16.4 16.2)"/>
-        <circle cx="14.7" cy="3.5" r="0.95"/>
-        <circle cx="16.7" cy="2.9" r="1.05"/>
-        <circle cx="18.8" cy="3.6" r="1.05"/>
+      <!-- 발바닥·발가락 5개 발자국 한 쌍 SVG -->
+      <svg viewBox="0 0 28 28" fill="currentColor" aria-hidden="true">
+        <!-- 왼쪽 발자국 -->
+        <ellipse cx="4.8" cy="7.2" rx="0.95" ry="1.35" transform="rotate(-18 4.8 7.2)"/>
+        <ellipse cx="6.6" cy="6.2" rx="0.95" ry="1.35" transform="rotate(-8 6.6 6.2)"/>
+        <ellipse cx="8.5" cy="6.1" rx="0.9" ry="1.25" transform="rotate(4 8.5 6.1)"/>
+        <ellipse cx="10.2" cy="6.8" rx="0.8" ry="1.15" transform="rotate(14 10.2 6.8)"/>
+        <ellipse cx="11.5" cy="8.1" rx="0.7" ry="1.0" transform="rotate(24 11.5 8.1)"/>
+        <path d="M5.2 9.3C4.3 10.7 4.7 12.6 5.9 14.1C6.8 15.2 6.7 16.5 6.3 17.8C5.9 19.2 6.6 20.6 8.1 20.8C9.6 21.0 10.8 19.9 10.8 18.4C10.8 16.8 10.3 15.3 10.7 13.7C11.2 11.8 10.7 9.8 9.2 8.9C7.8 8.0 6.0 8.1 5.2 9.3Z"/>
+
+        <!-- 오른쪽 발자국 -->
+        <ellipse cx="16.5" cy="8.1" rx="0.7" ry="1.0" transform="rotate(-24 16.5 8.1)"/>
+        <ellipse cx="17.8" cy="6.8" rx="0.8" ry="1.15" transform="rotate(-14 17.8 6.8)"/>
+        <ellipse cx="19.5" cy="6.1" rx="0.9" ry="1.25" transform="rotate(-4 19.5 6.1)"/>
+        <ellipse cx="21.4" cy="6.2" rx="0.95" ry="1.35" transform="rotate(8 21.4 6.2)"/>
+        <ellipse cx="23.2" cy="7.2" rx="0.95" ry="1.35" transform="rotate(18 23.2 7.2)"/>
+        <path d="M18.8 8.9C17.3 9.8 16.8 11.8 17.3 13.7C17.7 15.3 17.2 16.8 17.2 18.4C17.2 19.9 18.4 21.0 19.9 20.8C21.4 20.6 22.1 19.2 21.7 17.8C21.3 16.5 21.2 15.2 22.1 14.1C23.3 12.6 23.7 10.7 22.8 9.3C22.0 8.1 20.2 8.0 18.8 8.9Z"/>
       </svg>
     </button>
   </div>
