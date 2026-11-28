@@ -150,11 +150,11 @@
     }
     .layer-icon-btn:active { background: #e2e8f0; transform: scale(0.96); }
     .layer-icon-btn svg {
-      width: 23px; height: 23px; flex-shrink: 0;
+      width: 24px; height: 24px; flex-shrink: 0;
     }
     .layer-icon-btn.active {
       background: #eff6ff;
-      color: #0284c7;
+      color: #0f172a;
       border-color: #0284c7;
     }
     .layer-btn {
@@ -306,7 +306,7 @@
       display: flex;
     }
 
-    /* 핀 포인트: 경계선을 가리지 않는 7.5px 고대비 점 + 28×28px 터치 영역 */
+    /* 핀 포인트: 경계선을 가리지 않는 6.5px 고대비 점 + 28×28px 터치 영역 */
     .pt-dot-hit {
       width: 28px; height: 28px;
       display: flex; align-items: center; justify-content: center;
@@ -314,9 +314,9 @@
     }
     .pt-dot-hit:active { cursor: grabbing; }
     .pt-dot-total {
-      width: 7.5px; height: 7.5px; border-radius: 50%;
+      width: 6.5px; height: 6.5px; border-radius: 50%;
       background: #ff1e42;
-      border: 1.5px solid #ffffff;
+      border: 1.4px solid #ffffff;
       box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.72), 0 1px 4px rgba(0, 0, 0, 0.65);
       pointer-events: none;
     }
@@ -369,23 +369,34 @@
 
 <div class="right-panel">
   <div class="layer-controls">
-    <!-- 위성사진 B안: 인공위성 + 지면 곡선·필지 구획 -->
+    <!-- 위성사진 아이콘: 반대 방향으로 눕힌 심플 인공위성 -->
     <button type="button" class="layer-icon-btn active" id="btnSky" onclick="toggleSkyview()" title="위성지도" aria-label="위성지도">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="10.2" y="4.8" width="3.6" height="5.2" rx="0.8" transform="rotate(-45 12 7.4)" fill="#dbeafe" />
-        <rect x="4.5" y="2.8" width="4.4" height="2.8" rx="0.4" transform="rotate(-45 6.7 4.2)" fill="#93c5fd" />
-        <rect x="15.1" y="9.2" width="4.4" height="2.8" rx="0.4" transform="rotate(-45 17.3 10.6)" fill="#93c5fd" />
-        <line x1="8.3" y1="5.8" x2="10.1" y2="7.6" />
-        <line x1="13.9" y1="7.2" x2="15.7" y2="9" />
-        <line x1="14.2" y1="5.2" x2="16.8" y2="2.6" />
-        <path d="M3.5 16.5C8.8 14.3 15.2 14.3 20.5 16.5" stroke="#0f172a" stroke-width="1.8" />
-        <path d="M6.5 15.6L5 20.5" stroke="#0f172a" stroke-width="1.5" />
-        <path d="M12 14.9V20.5" stroke="#0f172a" stroke-width="1.5" />
-        <path d="M17.5 15.6L19 20.5" stroke="#0f172a" stroke-width="1.5" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <g transform="rotate(32 12 11.2)">
+          <!-- 좌우 태양광 패널 -->
+          <rect x="2.2" y="9.2" width="6.2" height="4" rx="0.7" />
+          <line x1="4.3" y1="9.2" x2="4.3" y2="13.2" />
+          <line x1="6.4" y1="9.2" x2="6.4" y2="13.2" />
+          <rect x="15.6" y="9.2" width="6.2" height="4" rx="0.7" />
+          <line x1="17.7" y1="9.2" x2="17.7" y2="13.2" />
+          <line x1="19.8" y1="9.2" x2="19.8" y2="13.2" />
+          <!-- 연결축 및 중앙 본체 -->
+          <line x1="8.4" y1="11.2" x2="10.1" y2="11.2" />
+          <line x1="13.9" y1="11.2" x2="15.6" y2="11.2" />
+          <rect x="10.1" y="8.4" width="3.8" height="5.6" rx="1" />
+          <!-- 상단 접시 안테나 -->
+          <line x1="12" y1="8.4" x2="12" y2="6.6" />
+          <path d="M9.6 4.4a2.4 2.4 0 0 0 4.8 0Z" />
+          <line x1="12" y1="4.4" x2="12" y2="2.3" />
+          <!-- 하단 관측 신호선 -->
+          <line x1="12" y1="16.2" x2="12" y2="19.6" />
+          <line x1="9.4" y1="15.7" x2="7.8" y2="18.6" />
+          <line x1="14.6" y1="15.7" x2="16.2" y2="18.6" />
+        </g>
       </svg>
     </button>
 
-    <!-- 지적도 A안: 불규칙한 다각형 노란 필지 경계선 -->
+    <!-- 지적도 아이콘: 불규칙한 다각형 노란 필지 경계선 -->
     <button type="button" class="layer-btn" id="btnCadastral" onclick="toggleCadastral()" title="지적도" aria-label="지적도">
       <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <rect x="2.5" y="2.5" width="19" height="19" rx="3.5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" />
@@ -407,7 +418,7 @@
     <button class="zoom-btn" onclick="zoomOut()" title="축소">−</button>
   </div>
 
-  <!-- 확대/축소 밑: 빨간 압정 핀 / 걷는 사람 실루엣 -->
+  <!-- 확대/축소 밑: 수동 핀포인트 / 도보 자동 측정 모드 -->
   <div class="side-mode-controls" role="group" aria-label="측정 모드">
     <button type="button" class="side-mode-btn active-manual" id="btnModeManual" onclick="setMeasureMode('manual')" title="수동 찍기" aria-label="수동 찍기">
       <svg viewBox="0 0 24 24" aria-hidden="true">
