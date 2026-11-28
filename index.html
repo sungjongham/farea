@@ -150,12 +150,13 @@
     }
     .layer-icon-btn:active { background: #e2e8f0; transform: scale(0.96); }
     .layer-icon-btn svg {
-      width: 24px; height: 24px; flex-shrink: 0;
+      width: 25px; height: 25px; flex-shrink: 0;
     }
     .layer-icon-btn.active {
-      background: #eff6ff;
+      background: #fef9c3;
       color: #0f172a;
-      border-color: #0284c7;
+      border: 2px solid #eab308;
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35), 0 4px 12px rgba(0, 0, 0, 0.35);
     }
     .layer-btn {
       width: 40px; height: 40px;
@@ -369,29 +370,29 @@
 
 <div class="right-panel">
   <div class="layer-controls">
-    <!-- 위성사진 아이콘: 반대 방향으로 눕힌 심플 인공위성 -->
+    <!-- 위성사진 아이콘: 선명한 컬러 채움 + 반대 방향 눕힌 심플 인공위성 -->
     <button type="button" class="layer-icon-btn active" id="btnSky" onclick="toggleSkyview()" title="위성지도" aria-label="위성지도">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <g transform="rotate(32 12 11.2)">
           <!-- 좌우 태양광 패널 -->
-          <rect x="2.2" y="9.2" width="6.2" height="4" rx="0.7" />
-          <line x1="4.3" y1="9.2" x2="4.3" y2="13.2" />
-          <line x1="6.4" y1="9.2" x2="6.4" y2="13.2" />
-          <rect x="15.6" y="9.2" width="6.2" height="4" rx="0.7" />
-          <line x1="17.7" y1="9.2" x2="17.7" y2="13.2" />
-          <line x1="19.8" y1="9.2" x2="19.8" y2="13.2" />
+          <rect x="2.0" y="9.0" width="6.5" height="4.4" rx="0.8" fill="#38bdf8" />
+          <line x1="4.2" y1="9.0" x2="4.2" y2="13.4" stroke="#0c4a6e" stroke-width="1.4" />
+          <line x1="6.3" y1="9.0" x2="6.3" y2="13.4" stroke="#0c4a6e" stroke-width="1.4" />
+          <rect x="15.5" y="9.0" width="6.5" height="4.4" rx="0.8" fill="#38bdf8" />
+          <line x1="17.7" y1="9.0" x2="17.7" y2="13.4" stroke="#0c4a6e" stroke-width="1.4" />
+          <line x1="19.8" y1="9.0" x2="19.8" y2="13.4" stroke="#0c4a6e" stroke-width="1.4" />
           <!-- 연결축 및 중앙 본체 -->
-          <line x1="8.4" y1="11.2" x2="10.1" y2="11.2" />
-          <line x1="13.9" y1="11.2" x2="15.6" y2="11.2" />
-          <rect x="10.1" y="8.4" width="3.8" height="5.6" rx="1" />
+          <line x1="8.5" y1="11.2" x2="10.0" y2="11.2" stroke="#0f172a" stroke-width="2.2" />
+          <line x1="14.0" y1="11.2" x2="15.5" y2="11.2" stroke="#0f172a" stroke-width="2.2" />
+          <rect x="10.0" y="8.2" width="4.0" height="6.0" rx="1" fill="#1d4ed8" />
           <!-- 상단 접시 안테나 -->
-          <line x1="12" y1="8.4" x2="12" y2="6.6" />
-          <path d="M9.6 4.4a2.4 2.4 0 0 0 4.8 0Z" />
-          <line x1="12" y1="4.4" x2="12" y2="2.3" />
+          <line x1="12" y1="8.2" x2="12" y2="6.4" stroke="#0f172a" stroke-width="2" />
+          <path d="M9.5 4.2a2.5 2.5 0 0 0 5.0 0Z" fill="#2563eb" />
+          <line x1="12" y1="4.2" x2="12" y2="2.0" stroke="#0f172a" stroke-width="2" />
           <!-- 하단 관측 신호선 -->
-          <line x1="12" y1="16.2" x2="12" y2="19.6" />
-          <line x1="9.4" y1="15.7" x2="7.8" y2="18.6" />
-          <line x1="14.6" y1="15.7" x2="16.2" y2="18.6" />
+          <line x1="12" y1="16.2" x2="12" y2="19.8" stroke="#0284c7" stroke-width="2.4" />
+          <line x1="9.2" y1="15.7" x2="7.5" y2="18.7" stroke="#0284c7" stroke-width="2.3" />
+          <line x1="14.8" y1="15.7" x2="16.5" y2="18.7" stroke="#0284c7" stroke-width="2.3" />
         </g>
       </svg>
     </button>
